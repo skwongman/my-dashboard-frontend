@@ -139,7 +139,7 @@ const fetchNews = async (reset = false) => {
     // items is an array
     const pageItems = items.map(item => ({
       title: item.title || "",
-      link: item.webUrl || item.vodUrl || "", // fallback to vodUrl if webUrl is null
+      link: `https://news.now.com/home/local/player?newsId=${item.newsId}`,
       pubDate: item.dateDiffString || "",
       image: item.imageUrl || "",
       summary: item.summary
