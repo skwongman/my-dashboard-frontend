@@ -69,6 +69,7 @@
             size="small"
             bordered
             :pagination="{ pageSize: 6 }"
+            :loading="loading"
           />
         </a-tab-pane>
         <a-tab-pane key="temperature" tab="Temperature">
@@ -79,6 +80,7 @@
             size="small"
             bordered
             :pagination="{ pageSize: 9 }"
+            :loading="loading"
           />
         </a-tab-pane>
       </a-tabs>
