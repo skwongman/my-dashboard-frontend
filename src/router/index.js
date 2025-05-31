@@ -17,7 +17,7 @@ const routes = [
   {
     path: '/register',
     name: 'Register',
-    component: Register  // This should point to your Register component
+    component: Login  // Updated from 'Register' to 'Login' in order to prevent for registration temporarily
   },
   {
     path: '/dashboard',
