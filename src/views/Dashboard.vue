@@ -192,7 +192,11 @@ import HKNews from "../components/HKNews.vue"
 const authStore = useAuthStore()
 const router = useRouter()
 const collapsed = ref(true)
-const currentMenu = ref("dashboard")
+const currentMenu = ref(localStorage.getItem('currentMenu') || "dashboard")
+
+watch(currentMenu, (val) => {
+  localStorage.setItem('currentMenu', val)
+})
 
 const user = computed(() => ({
   ...authStore.user,
