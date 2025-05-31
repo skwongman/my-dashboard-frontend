@@ -53,7 +53,7 @@
           />
           <div class="flex items-center space-x-4 ml-auto">
             <a-avatar :src="user.avatar" size="large" />
-            <span class="font-semibold text-white hidden sm:inline">{{ user.username }}</span>
+            <span class="font-semibold text-white">{{ user.username }}</span>
             <a-button type="primary" danger @click="logout">Logout</a-button>
           </div>
         </div>
@@ -65,7 +65,6 @@
           <!-- Welcome Card -->
           <a-card class="mb-6">
             <div class="flex items-center space-x-4">
-              <a-avatar :src="user.avatar" size="large" />
               <div>
                 <h2 class="text-2xl font-semibold">
                   Welcome back, {{ user.username }}!
@@ -374,11 +373,12 @@ onUnmounted(() => {
     left: 0 !important;
   }
   .header-content {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row !important;
+    align-items: center !important;
     height: auto;
     padding: 10px 8px;
-    gap: 10px;
+    gap: 8px;
+    width: 100%;
   }
   .logo {
     padding: 0 8px;
@@ -410,12 +410,20 @@ onUnmounted(() => {
     flex-direction: column !important;
     gap: 10px !important;
   }
+  /* REMOVE the .ant-avatar and .ant-btn rules below! */
+  /*
   .ant-avatar {
     width: 60px !important;
     height: 60px !important;
     min-width: 60px !important;
     min-height: 60px !important;
   }
+  .ant-btn {
+    width: 100%;
+    font-size: 1rem;
+    height: 40px;
+  }
+  */
   .ant-tabs-nav {
     flex-wrap: wrap;
     font-size: 1rem;
@@ -431,11 +439,6 @@ onUnmounted(() => {
   .ant-form-item {
     margin-bottom: 12px !important;
   }
-  .ant-btn {
-    width: 100%;
-    font-size: 1rem;
-    height: 40px;
-  }
   .ant-upload {
     width: 100%;
   }
@@ -448,6 +451,22 @@ onUnmounted(() => {
     background: rgba(0,0,0,0.35);
     z-index: 999;
     transition: opacity 0.2s;
+  }
+  .header-content .trigger {
+    margin-right: 8px;
+  }
+  .header-content .flex {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-left: auto;
+  }
+  .header-content .ant-avatar {
+    margin-bottom: 0 !important;
+  }
+  .header-content .ant-btn {
+    margin-left: 0 !important;
+    width: auto !important; /* Prevent full width for logout */
   }
 }
 </style>
