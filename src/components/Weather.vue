@@ -145,7 +145,8 @@ const forecastColumns = [
   {
     title: "Description",
     dataIndex: "desc",
-    key: "desc"
+    key: "desc",
+    responsive: ['md'] // Hide on mobile (xs/sm)
   }
 ]
 
