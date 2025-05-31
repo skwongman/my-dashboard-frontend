@@ -1,71 +1,88 @@
 <template>
-  <a-card title="香港新聞" class="mb-6 profile-card">
-    <template #extra>
-      <a-button
-        type="text"
-        :loading="loading"
-        @click="refreshNews"
-        title="重新整理"
-        class="!p-0 text-white"
-      >
-        <ReloadOutlined />
-      </a-button>
-    </template>
-    <div ref="scrollContainer" class="news-scroll-container">
-      <div
-        class="flex flex-col md:flex-row items-center justify-between gap-6 mb-6 p-6 bg-white rounded-xl shadow border border-gray-100"
-      >
-        <div class="flex items-center gap-5">
-          <span class="text-4xl">📰</span>
-          <div>
-            <div class="text-xl font-semibold mb-1">最新香港新聞</div>
-            <div class="text-gray-500 text-sm">
-              查看來自可信來源的最新香港新聞
+  <div>
+    <a-card title="香港新聞" class="mb-6 profile-card">
+      <template #extra>
+        <a-button
+          type="text"
+          :loading="loading"
+          @click="refreshNews"
+          title="重新整理"
+          class="!p-0 text-white"
+        >
+          <ReloadOutlined />
+        </a-button>
+      </template>
+      <div ref="scrollContainer" class="news-scroll-container">
+        <div
+          class="flex flex-col md:flex-row items-center justify-between gap-6 mb-6 p-6 bg-white rounded-xl shadow border border-gray-100"
+        >
+          <div class="flex items-center gap-5">
+            <span class="text-4xl">📰</span>
+            <div>
+              <div class="text-xl font-semibold mb-1">最新香港新聞</div>
+              <div class="text-gray-500 text-sm">
+                查看來自可信來源的最新香港新聞
+              </div>
             </div>
           </div>
-        </div>
-        <div class="flex flex-col items-end">
-          <span class="text-xs text-gray-400">最後更新：</span>
-          <span class="font-medium text-gray-600 text-sm">{{
-            updateTime
-          }}</span>
-        </div>
-      </div>
-      <div v-if="news.length === 0 && loading" class="news-loading">
-        載入中...
-      </div>
-      <div v-else>
-        <div v-if="error" class="news-loading text-red-500">{{ error }}</div>
-        <div class="news-grid">
-          <div v-for="(item, idx) in news" :key="item.link + idx" class="news-item">
-            <a
-              :href="item.link"
-              target="_blank"
-              rel="noopener"
-              class="news-link"
-            >
-              <img
-                :src="getValidImage(item, idx)"
-                alt="thumbnail"
-                class="news-thumb"
-              />
-              <div class="news-content">
-                <div class="news-headline">{{ item.title }}</div>
-                <div class="news-date">{{ item.pubDate }}</div>
-              </div>
-            </a>
+          <div class="flex flex-col items-end">
+            <span class="text-xs text-gray-400">最後更新：</span>
+            <span class="font-medium text-gray-600 text-sm">{{
+              updateTime
+            }}</span>
           </div>
         </div>
-        <div v-if="loading && news.length > 0" class="news-loading">
-          進一步載入中...
+        <div v-if="news.length === 0 && loading" class="news-loading">
+          載入中...
         </div>
-        <div v-if="noMore && !loading" class="news-loading">已載入全部新聞</div>
-        <div v-if="!loading && news.length === 0 && !error" class="news-loading">
-          沒有新聞
+        <div v-else>
+          <div v-if="error" class="news-loading text-red-500">{{ error }}</div>
+          <div class="news-grid">
+            <div v-for="(item, idx) in news" :key="item.link + idx" class="news-item">
+              <a
+                :href="item.link"
+                target="_blank"
+                rel="noopener"
+                class="news-link"
+              >
+                <img
+                  :src="getValidImage(item, idx)"
+                  alt="thumbnail"
+                  class="news-thumb"
+                />
+                <div class="news-content">
+                  <div class="news-headline">{{ item.title }}</div>
+                  <div class="news-date">{{ item.pubDate }}</div>
+                </div>
+              </a>
+            </div>
+          </div>
+          <div v-if="loading && news.length > 0" class="news-loading">
+            進一步載入中...
+          </div>
+          <div v-if="noMore && !loading" class="news-loading">已載入全部新聞</div>
+          <div v-if="!loading && news.length === 0 && !error" class="news-loading">
+            沒有新聞
+          </div>
         </div>
       </div>
-    </div>
-  </a-card>
+    </a-card>
+
+    <a-button
+      v-show="showBackToTop"
+      class="back-to-top-btn"
+      type="primary"
+      shape="circle"
+      @click="scrollToTop"
+      title="回到頂部"
+    >
+      <template #icon>
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
+          <path d="M12 19V5M12 5L6 11M12 5l6 6" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </template>
+    </a-button>
+  </div>
 </template>
 
 <script setup>
@@ -79,6 +96,7 @@ const error = ref("")
 const scrollContainer = ref(null)
 const page = ref(0)
 const noMore = ref(false)
+const showBackToTop = ref(false)
 
 // 一組有效的隨機圖片（固定圖片來源，確保可用）
 const randomImages = [
@@ -165,6 +183,7 @@ const handleWindowScroll = () => {
   const scrollY = window.scrollY || window.pageYOffset
   const viewportHeight = window.innerHeight
   const fullHeight = document.documentElement.scrollHeight
+  showBackToTop.value = scrollY > 300
   if (scrollY + viewportHeight >= fullHeight - 100) {
     page.value += 1
     fetchNews()
@@ -179,6 +198,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener("scroll", handleWindowScroll)
 })
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: "smooth" })
+}
 </script>
 
 <style scoped>
@@ -338,5 +361,25 @@ onBeforeUnmount(() => {
   max-height: 4.4em;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.back-to-top-btn {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: opacity 0.2s;
+  opacity: 0.85;
+  width: 56px;
+  height: 56px;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.back-to-top-btn:hover {
+  opacity: 1;
 }
 </style>
