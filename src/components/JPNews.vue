@@ -27,13 +27,25 @@
           </div>
           <div class="flex flex-col items-end">
             <span class="text-xs text-gray-400">最終更新:</span>
-            <span class="font-medium text-gray-600 text-sm">{{
-              updateTime
-            }}</span>
+            <span class="font-medium text-gray-600 text-sm">
+              <template v-if="loading && news.length === 0">
+                <span class="inline-block align-middle" style="width: 100px; height: 18px; background: #e0e0e0; border-radius: 4px; animation: skeleton-loading 1.2s infinite linear alternate;"></span>
+              </template>
+              <template v-else>
+                {{ updateTime }}
+              </template>
+            </span>
           </div>
         </div>
-        <div v-if="news.length === 0 && loading" class="news-loading">
-          読み込み中...
+        <!-- Skeleton loading effect -->
+        <div v-if="news.length === 0 && loading" class="news-skeletons">
+          <div v-for="n in 12" :key="n" class="news-item skeleton">
+            <div class="news-thumb skeleton-thumb"></div>
+            <div class="news-content">
+              <div class="news-headline skeleton-line"></div>
+              <div class="news-date skeleton-line short"></div>
+            </div>
+          </div>
         </div>
         <div v-else>
           <div class="news-grid">
@@ -52,9 +64,20 @@
               </a>
             </div>
           </div>
-          <div v-if="loading && news.length > 0" class="news-loading">
-            さらに読み込み中...
+          <div
+            v-if="loading && news.length > 0"
+            class="news-skeletons"
+            style="margin-top: 24px;"
+            >
+            <div v-for="n in 12" :key="'loading-' + n" class="news-item skeleton">
+              <div class="news-thumb skeleton-thumb"></div>
+              <div class="news-content">
+              <div class="news-headline skeleton-line"></div>
+              <div class="news-date skeleton-line short"></div>
+              </div>
+            </div>
           </div>
+          <div v-if="loading && news.length > 0" class="news-loading">さらに読み込み中...</div>
           <div v-if="noMore" class="news-loading">すべて読み込みました</div>
         </div>
       </div>
@@ -84,6 +107,8 @@ import { ReloadOutlined } from "@ant-design/icons-vue"
 const news = ref([])
 const loading = ref(false)
 const updateTime = ref("")
+const error = ref("")
+const scrollContainer = ref(null)
 const page = ref(0)
 const noMore = ref(false)
 const showBackToTop = ref(false)
@@ -92,6 +117,8 @@ const fetchNews = async (reset = false) => {
   if (loading.value || noMore.value) return
   loading.value = true
   try {
+    // Delay 1s before fetching
+    await new Promise(resolve => setTimeout(resolve, 1000))
     const res = await fetch(
       `https://newsapi.jprogrammer.online/api/news/jp?page=${page.value}`
     )
@@ -120,10 +147,14 @@ const fetchNews = async (reset = false) => {
   }
 }
 
-const refreshNews = () => {
+const refreshNews = async () => {
   page.value = 0
   noMore.value = false
-  fetchNews(true)
+  error.value = ""
+  // Clear news immediately to trigger skeleton
+  news.value = []
+  updateTime.value = ""
+  await fetchNews(true)
   window.scrollTo({ top: 0, behavior: "smooth" })
 }
 
@@ -320,5 +351,63 @@ const scrollToTop = () => {
 }
 .back-to-top-btn:hover {
   opacity: 1;
+}
+
+.news-skeletons {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 24px;
+  width: 100%;
+}
+@media (max-width: 1400px) {
+  .news-skeletons {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (max-width: 1100px) {
+  .news-skeletons {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .news-skeletons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .news-skeletons {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+.skeleton {
+  background: #f4f4f4;
+  border-radius: 10px;
+  overflow: hidden;
+  animation: skeleton-loading 1.2s infinite linear alternate;
+}
+.skeleton-thumb {
+  width: 100%;
+  height: 300px;
+  background: #e0e0e0;
+}
+.skeleton-line {
+  height: 20px;
+  background: #e0e0e0;
+  margin: 16px 0 8px 0;
+  border-radius: 4px;
+}
+.skeleton-line.short {
+  width: 60%;
+  height: 16px;
+  margin: 0 0 12px 0;
+}
+@keyframes skeleton-loading {
+  0% {
+    background-color: #f4f4f4;
+  }
+  100% {
+    background-color: #e0e0e0;
+  }
 }
 </style>
