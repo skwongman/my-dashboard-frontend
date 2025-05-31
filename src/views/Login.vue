@@ -140,6 +140,7 @@ const onFinish = async () => {
   background: transparent !important;
   color: #1f1f1f !important;
   border: 1px solid #d9d9d9 !important; /* Ant Design's border color */
+  padding: 1px 5px !important;
 }
 
 :deep(.ant-input::placeholder),
