@@ -118,7 +118,7 @@ const fetchNews = async (reset = false) => {
   loading.value = true
   try {
     // Delay 1s before fetching
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise(resolve => setTimeout(resolve, 500))
     const res = await fetch(
       `https://newsapi.jprogrammer.online/api/news/jp?page=${page.value}`
     )

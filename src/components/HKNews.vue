@@ -157,7 +157,7 @@ const fetchNews = async (reset = false) => {
     const pageNo = page.value + 1
     const apiUrl = `https://d3sli7vh0lsda4.cloudfront.net/api/getNewsList?category=119&pageNo=${pageNo}&pageSize=${pageSize}`
     // Delay 1s before fetching
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise(resolve => setTimeout(resolve, 500))
     const res = await fetch(apiUrl)
     if (!res.ok) throw new Error("無法獲取香港新聞")
     const items = await res.json()
