@@ -226,7 +226,7 @@ const fetchWeather = async () => {
 const fetchForecast = async () => {
   try {
     const res = await fetch(
-      "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=en"
+      "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc"
     )
     const data = await res.json()
     forecastData.value = (data.weatherForecast || []).map((day) => ({
