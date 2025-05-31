@@ -69,7 +69,6 @@ const loading = ref(false)
 const updateTime = ref("")
 const page = ref(0)
 const noMore = ref(false)
-const scrollContainer = ref(null)
 
 const fetchNews = async (reset = false) => {
   if (loading.value || noMore.value) return
@@ -107,16 +106,15 @@ const refreshNews = () => {
   page.value = 0
   noMore.value = false
   fetchNews(true)
-  // Scroll to top after refresh
-  if (scrollContainer.value) {
-    scrollContainer.value.scrollTop = 0
-  }
+  window.scrollTo({ top: 0, behavior: "smooth" })
 }
 
-const handleScroll = () => {
-  const el = scrollContainer.value
-  if (!el || loading.value || noMore.value) return
-  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+const handleWindowScroll = () => {
+  if (loading.value || noMore.value) return
+  const scrollY = window.scrollY || window.pageYOffset
+  const viewportHeight = window.innerHeight
+  const fullHeight = document.documentElement.scrollHeight
+  if (scrollY + viewportHeight >= fullHeight - 100) {
     page.value += 1
     fetchNews()
   }
@@ -124,23 +122,16 @@ const handleScroll = () => {
 
 onMounted(() => {
   fetchNews(true)
-  if (scrollContainer.value) {
-    scrollContainer.value.addEventListener("scroll", handleScroll)
-  }
+  window.addEventListener("scroll", handleWindowScroll)
 })
 
 onBeforeUnmount(() => {
-  if (scrollContainer.value) {
-    scrollContainer.value.removeEventListener("scroll", handleScroll)
-  }
+  window.removeEventListener("scroll", handleWindowScroll)
 })
 </script>
 
 <style scoped>
 .news-scroll-container {
-  max-height: 700px;
-  overflow-y: auto;
-  padding-right: 18px; /* Space for scrollbar */
   box-sizing: border-box;
 }
 
@@ -179,9 +170,54 @@ onBeforeUnmount(() => {
 @media (max-width: 600px) {
   .news-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .news-scroll-container {
+    padding-right: 0;
+    max-height: none;
+  }
+
+  .news-item {
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-bottom: 12px;
+  }
+
+  .news-thumb {
+    height: 180px;
+    min-height: 120px;
+    max-height: 200px;
+  }
+
+  .news-content {
+    padding: 10px 12px 10px 12px;
+  }
+
+  .news-headline {
+    font-size: 1.15rem;
+    min-height: 2.2em;
+    margin-bottom: 6px;
+  }
+
+  .news-date {
+    font-size: 1rem;
+  }
+
+  .profile-card {
+    padding: 0 !important;
+  }
+
+  .ant-card-head-title {
+    font-size: 1.2rem !important;
+  }
+
+  .ant-card {
+    font-size: 1rem;
   }
 }
 
+/* General improvements for all sizes */
 .news-item {
   background: #fafbfc;
   border-radius: 10px;
@@ -233,6 +269,7 @@ onBeforeUnmount(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-word;
 }
 
 .news-date {

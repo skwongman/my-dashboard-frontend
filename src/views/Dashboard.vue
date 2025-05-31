@@ -11,24 +11,31 @@
         <h2 class="text-white text-start py-4">My App</h2>
       </div>
       <a-menu theme="dark" mode="inline" :selected-keys="[currentMenu]">
-        <a-menu-item key="dashboard" @click="currentMenu = 'dashboard'">
-          <dashboard-outlined />
-          <span>Dashboard</span>
-        </a-menu-item>
-        <a-menu-item key="weather" @click="currentMenu = 'weather'">
-          <cloud-outlined />
-          <span>Weather</span>
-        </a-menu-item>
-        <a-menu-item key="hknews" @click="currentMenu = 'hknews'">
-          <read-outlined />
-          <span>HK News</span>
-        </a-menu-item>
-        <a-menu-item key="jpnews" @click="currentMenu = 'jpnews'">
-          <notification-outlined />
+        <a-menu-item key="dashboard" @click="currentMenu = 'dashboard'; collapsed = true">
+        <dashboard-outlined />
+        <span>Dashboard</span>
+      </a-menu-item>
+      <a-menu-item key="weather" @click="currentMenu = 'weather'; collapsed = true">
+        <cloud-outlined />
+        <span>Weather</span>
+      </a-menu-item>
+      <a-menu-item key="hknews" @click="currentMenu = 'hknews'; collapsed = true">
+        <read-outlined />
+        <span>HK News</span>
+      </a-menu-item>
+      <a-menu-item key="jpnews" @click="currentMenu = 'jpnews'; collapsed = true">
+        <notification-outlined />
         <span>JP News</span>
-        </a-menu-item>
+      </a-menu-item>
       </a-menu>
     </a-layout-sider>
+
+    <!-- Overlay for mobile sidebar -->
+    <div
+      v-if="!collapsed"
+      class="mobile-sider-overlay"
+      @click="collapsed = true"
+    ></div>
 
     <a-layout>
       <!-- Header -->
@@ -271,17 +278,17 @@ const logout = () => {
   router.push("/login")
 }
 
-watch(
-  () => currentMenu.value,
-  (val) => {
-    if (val === "news" || val === "hknews") {
-      document.body.style.overflow = "hidden"
-    } else {
-      document.body.style.overflow = ""
-    }
-  },
-  { immediate: true }
-)
+// watch(
+//   () => currentMenu.value,
+//   (val) => {
+//     if (val === "jpnews" || val === "hknews") {
+//       document.body.style.overflow = "hidden"
+//     } else {
+//       document.body.style.overflow = ""
+//     }
+//   },
+//   { immediate: true }
+// )
 
 onUnmounted(() => {
   document.body.style.overflow = ""
@@ -348,4 +355,99 @@ onUnmounted(() => {
 <style scoped>
 @import "https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css";
 @import "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
+
+@media (max-width: 600px) {
+  .ant-layout-sider {
+    position: absolute !important;
+    z-index: 1000;
+    height: 100vh !important;
+    left: -100vw;
+    transition: left 0.3s;
+    width: 220px !important;
+    min-width: 0 !important;
+    max-width: 80vw !important;
+  }
+  .ant-layout-sider-collapsed {
+    left: -100vw !important;
+  }
+  .ant-layout-sider:not(.ant-layout-sider-collapsed) {
+    left: 0 !important;
+  }
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    padding: 10px 8px;
+    gap: 10px;
+  }
+  .logo {
+    padding: 0 8px;
+    height: 48px;
+  }
+  .ant-layout-header {
+    padding: 0 4px !important;
+    min-height: 56px !important;
+    height: auto !important;
+  }
+  .ant-layout-content {
+    padding: 8px !important;
+  }
+  .profile-card,
+  .ant-card {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .profile-card .ant-card-head {
+    border-radius: 0 !important;
+    font-size: 1.1rem;
+    padding: 10px 8px !important;
+  }
+  .flex,
+  .flex-col,
+  .md\:flex-row {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  .ant-avatar {
+    width: 60px !important;
+    height: 60px !important;
+    min-width: 60px !important;
+    min-height: 60px !important;
+  }
+  .ant-tabs-nav {
+    flex-wrap: wrap;
+    font-size: 1rem;
+  }
+  .ant-descriptions {
+    padding: 0 !important;
+  }
+  .ant-descriptions-item-label,
+  .ant-descriptions-item-content {
+    font-size: 1rem !important;
+    padding: 4px 0 !important;
+  }
+  .ant-form-item {
+    margin-bottom: 12px !important;
+  }
+  .ant-btn {
+    width: 100%;
+    font-size: 1rem;
+    height: 40px;
+  }
+  .ant-upload {
+    width: 100%;
+  }
+  .mobile-sider-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.35);
+    z-index: 999;
+    transition: opacity 0.2s;
+  }
+}
 </style>
