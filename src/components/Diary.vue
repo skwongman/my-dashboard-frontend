@@ -1,6 +1,10 @@
+# File: client/src/components/Diary.vue
 <template>
   <div class="diary-page">
-    <a-page-header title="Diary" class="diary-header" />
+    <a-page-header title="My Diary" class="diary-header">
+      <p class="diary-subtitle">A safe place for your thoughts and memories.</p>
+    </a-page-header>
+
     <div class="diary-actions">
       <a-button type="primary" @click="showCreateModal" class="diary-new-btn">
         <template #icon>
@@ -10,7 +14,19 @@
       </a-button>
     </div>
     <div class="diary-list">
-      <transition-group name="fade" tag="div" class="diary-cards">
+      <!-- Skeleton loading cards -->
+      <div v-if="loading" class="diary-cards">
+        <div v-for="n in 12" :key="n" class="diary-card">
+          <a-skeleton :active="true" :paragraph="{ rows: 3 }" />
+        </div>
+      </div>
+      <!-- Diary cards -->
+      <transition-group
+        v-else-if="diaries.length"
+        name="fade"
+        tag="div"
+        class="diary-cards"
+      >
         <div
           v-for="diary in diaries"
           :key="diary.id"
@@ -61,8 +77,8 @@
           </div>
         </div>
       </transition-group>
-      <div v-if="!diaries.length" class="diary-empty">
-        <img src="https://cdn.jsdelivr.net/gh/edent/SuperTinyIcons/images/svg/notebook.svg" alt="No Diaries" />
+      <div v-else class="diary-empty">
+        <span class="material-symbols-outlined">menu_book</span>
         <p>No diary entries yet. Click "New Diary" to create your first entry!</p>
       </div>
     </div>
@@ -84,8 +100,9 @@
       :confirm-loading="modalLoading"
       @cancel="resetModal"
       destroy-on-close
-      :width="500"
+      :width="1000"
       class="diary-modal"
+      :footer="modalMode === 'view' ? null : undefined"
     >
       <a-form
         v-if="modalMode !== 'view'"
@@ -112,7 +129,14 @@
         <div class="diary-modal-meta">
           <span>
             <span class="material-symbols-outlined">calendar_month</span>
-            {{ formatDate(modalForm.post_date) }}
+            {{ new Date(modalForm.post_date).toLocaleString(undefined, { // Apply date-time formatting here
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: 'numeric',
+              hour12: true
+            }) }}
           </span>
           <span
             class="diary-status"
@@ -143,6 +167,9 @@ const totalItems = ref(0)
 const pageSize = 10
 const totalPages = ref(1)
 const token = localStorage.getItem('token')
+
+// Skeleton loading state
+const loading = ref(false)
 
 const API_URL = import.meta.env.DEV
   ? import.meta.env.VITE_API_URL_LOCAL
@@ -177,11 +204,15 @@ function resetModal() {
 }
 
 async function fetchDiaries(page = 1) {
+  // Scroll to top when pagination changes
+  window.scrollTo(0, 0);
+
+  loading.value = true
   try {
     currentPage.value = page
     const res = await axios.get(`${API_URL}/diary?page=${page}`, {
       headers: {
-      Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`
       }
     })
     diaries.value = res.data.diaries.map(diary => ({
@@ -189,9 +220,14 @@ async function fetchDiaries(page = 1) {
       id: diary.id || diary.ID
     }))
     totalItems.value = res.data.totalItems
-    totalPages.value = res.data.totalPages // <-- Add this line
+    totalPages.value = res.data.totalPages
   } catch (err) {
     message.error('Failed to fetch diaries')
+  } finally {
+    // Add a 0.5s delay before setting loading to false
+    setTimeout(() => {
+      loading.value = false;
+    }, 500);
   }
 }
 
@@ -272,7 +308,7 @@ async function deleteDiary(id) {
   try {
     await axios.delete(`${API_URL}/diary/${id}`, {
       headers: {
-      Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`
       }
     })
     message.success('Diary deleted')
@@ -285,7 +321,9 @@ async function deleteDiary(id) {
 function formatDate(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return d.toLocaleDateString(undefined, {
+
+  // Always return date-only format
+  return d.toLocaleString(undefined, {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
@@ -305,13 +343,22 @@ onMounted(() => {
   font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
   background: linear-gradient(120deg, #f8fafc 0%, #e0e7ff 100%);
   min-height: 100vh;
-  padding: 0 32px 40px 32px;
+  padding: 40px 32px 40px 32px;
   box-sizing: border-box;
 }
 
 .diary-header {
-  background: transparent;
-  margin-bottom: 12px;
+  /* Keep previous styles you liked, but remove or reduce margin-bottom */
+  background-color: #ffffff; /* Example: A very light blue background */
+  padding: 20px 32px; /* Example: Add padding */
+  margin-bottom: 20px; /* Remove margin below the header */
+  box-shadow: 0 1px 6px rgba(80, 112, 255, 0.08); /* Example: Subtle shadow */
+  border-radius: 8px; /* Example: Rounded top corners only */
+}
+
+.diary-subtitle {
+  color: #666; /* Example: A slightly muted text color */
+  font-size: 15px; /* Example: Slightly smaller font size */
 }
 
 .diary-actions {
@@ -347,7 +394,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start; /* Changed from center to flex-start */
   width: 100%;
+  min-height: 60vh;
+  position: relative;
 }
 
 .diary-cards {
@@ -492,15 +542,41 @@ onMounted(() => {
   line-height: 34px;
 }
 
+/* Redesigned diary-empty */
 .diary-empty {
-  text-align: center;
-  margin-top: 60px;
+  margin-top: 48px; /* Add space below the New Diary button */
+  /* ...rest of your styles... */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(120deg, #f1f5f9 60%, #e0e7ff 100%);
+  border-radius: 18px;
+  box-shadow: 0 4px 24px 0 rgba(80, 112, 255, 0.08);
+  padding: 48px 32px 40px 32px;
+  max-width: 420px;
+  min-height: 220px;
   color: #64748b;
+  font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+  transition: box-shadow 0.2s;
 }
-.diary-empty img {
-  width: 80px;
-  margin-bottom: 16px;
-  opacity: 0.7;
+.diary-empty:hover {
+  box-shadow: 0 8px 32px 0 rgba(80, 112, 255, 0.13);
+}
+.diary-empty .material-symbols-outlined {
+  font-size: 3.2rem;
+  color: #a5b4fc;
+  margin-bottom: 18px;
+  opacity: 0.85;
+}
+.diary-empty p {
+  font-size: 1.13rem;
+  font-weight: 500;
+  margin: 0;
+  color: #475569;
+  letter-spacing: 0.01em;
+  text-align: center;
+  line-height: 1.6;
 }
 
 .diary-pagination {
@@ -541,6 +617,9 @@ onMounted(() => {
   white-space: pre-line;
   word-break: break-word;
   margin-top: 8px;
+  /* Added for scrollbar */
+  max-height: 400px; /* Adjust height as needed */
+  overflow-y: auto;
 }
 
 .material-symbols-outlined {
@@ -627,6 +706,9 @@ onMounted(() => {
   }
   .diary-modal .ant-modal-content {
     padding: 10px 2px 10px 2px;
+  }
+  .diary-header {
+    padding: 15px 20px; /* Adjusted padding for smaller screens */
   }
 }
 </style>
