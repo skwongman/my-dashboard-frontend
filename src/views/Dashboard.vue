@@ -193,6 +193,9 @@ const authStore = useAuthStore()
 const router = useRouter()
 const collapsed = ref(true)
 const currentMenu = ref(localStorage.getItem('currentMenu') || "dashboard")
+const API_URL = import.meta.env.DEV
+  ? import.meta.env.VITE_API_URL_LOCAL
+  : import.meta.env.VITE_API_URL_LIVE
 
 watch(currentMenu, (val) => {
   localStorage.setItem('currentMenu', val)
@@ -242,7 +245,7 @@ const saveProfile = async () => {
   try {
     // Update username if changed
     if (form.username !== user.value.username) {
-      const res = await fetch("https://mydashboardapi.jprogrammer.online/api/users/username", {
+      const res = await fetch(`${API_URL}/users/username`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -258,7 +261,7 @@ const saveProfile = async () => {
 
     // Update password if provided
     if (form.password) {
-      const res = await fetch("https://mydashboardapi.jprogrammer.online/api/users/password", {
+      const res = await fetch(`${API_URL}/users/password`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

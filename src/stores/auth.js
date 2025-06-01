@@ -3,16 +3,20 @@ import axios from 'axios'
 import { message } from 'ant-design-vue'
 import router from '../router'
 
+const API_URL = import.meta.env.DEV
+  ? import.meta.env.VITE_API_URL_LOCAL
+  : import.meta.env.VITE_API_URL_LIVE
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: JSON.parse(localStorage.getItem('user')) || null,
     token: localStorage.getItem('token') || null,
-    isAuthenticated: !!localStorage.getItem('token')
+    isAuthenticated: !!localStorage.getItem('token'),
   }),
   actions: {
     async login(email, password) {
       try {
-        const response = await axios.post('https://mydashboardapi.jprogrammer.online/api/auth/login', {
+        const response = await axios.post(`${API_URL}/auth/login`, {
           email,
           password
         })
@@ -39,7 +43,7 @@ export const useAuthStore = defineStore('auth', {
     
     async fetchUser() {
       try {
-        const response = await axios.get('https://mydashboardapi.jprogrammer.online/api/users/me', {
+        const response = await axios.get(`${API_URL}/users/me`, {
           headers: {
             'x-access-token': this.token
           }
@@ -58,7 +62,7 @@ export const useAuthStore = defineStore('auth', {
 
     async updatePassword(newPassword) {
       try {
-        const response = await axios.put('https://mydashboardapi.jprogrammer.online/api/users/password', {
+        const response = await axios.put(`${API_URL}/users/password`, {
           password: newPassword
         }, {
           headers: {
@@ -84,7 +88,7 @@ export const useAuthStore = defineStore('auth', {
 
     async register(username, email, password) {
       try {
-        const response = await axios.post('https://mydashboardapi.jprogrammer.online/api/auth/register', {
+        const response = await axios.post(`${API_URL}/auth/register`, {
           username,
           email,
           password
