@@ -27,6 +27,10 @@
         <notification-outlined />
         <span>JP News</span>
       </a-menu-item>
+      <a-menu-item key="diary" @click="currentMenu = 'diary'; collapsed = true">
+        <book-outlined />
+        <span>Diary</span>
+      </a-menu-item>
       </a-menu>
     </a-layout-sider>
 
@@ -160,6 +164,7 @@
         <Weather v-else-if="currentMenu === 'weather'" />
         <JPNews v-else-if="currentMenu === 'jpnews'" />
         <HKNews v-else-if="currentMenu === 'hknews'" />
+        <Diary v-else-if="currentMenu === 'diary'" />
       </a-layout-content>
     </a-layout>
   </a-layout>
@@ -184,10 +189,12 @@ import {
   CloudOutlined,
   ReadOutlined,
   NotificationOutlined,
+  BookOutlined,
 } from "@ant-design/icons-vue"
 import Weather from "../components/Weather.vue"
 import JPNews from "../components/JPNews.vue"
 import HKNews from "../components/HKNews.vue"
+import Diary from "../components/Diary.vue"
 
 const authStore = useAuthStore()
 const router = useRouter()
