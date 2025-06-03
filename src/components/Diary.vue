@@ -285,6 +285,8 @@ async function handleModalOk() {
         }
       })
       message.success('Diary created')
+      currentPage.value = 1 // Always go to first page after creation
+      fetchDiaries(1)
     } else if (modalMode.value === 'edit') {
       await axios.put(`${API_URL}/diary/${modalForm.id}`, {
         post_title: modalForm.post_title,
@@ -298,9 +300,9 @@ async function handleModalOk() {
         }
       })
       message.success('Diary updated')
+      fetchDiaries(currentPage.value)
     }
     modalVisible.value = false
-    fetchDiaries(currentPage.value)
   } catch (err) {
     message.error('Operation failed')
   } finally {
