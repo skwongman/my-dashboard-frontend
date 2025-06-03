@@ -1,4 +1,3 @@
-# File: client/src/components/Diary.vue
 <template>
   <div class="diary-page">
     <a-page-header title="My Diary" class="diary-header">
@@ -42,7 +41,7 @@
                   draft: diary.post_status === 'draft'
                 }"
               >
-                {{ diary.post_status }}
+                {{ capitalizeStatus(diary.post_status) }}
               </span>
             </div>
             <span class="diary-date">
@@ -129,7 +128,7 @@
         <div class="diary-modal-meta">
           <span>
             <span class="material-symbols-outlined">calendar_month</span>
-            {{ new Date(modalForm.post_date).toLocaleString(undefined, { // Apply date-time formatting here
+            {{ new Date(modalForm.post_date).toLocaleString(undefined, {
               year: 'numeric',
               month: 'short',
               day: 'numeric',
@@ -145,7 +144,7 @@
               draft: modalForm.post_status === 'draft'
             }"
           >
-            {{ modalForm.post_status }}
+            {{ capitalizeStatus(modalForm.post_status) }}
           </span>
         </div>
         <div class="diary-modal-content">
@@ -338,6 +337,11 @@ function formatDate(dateStr) {
 onMounted(() => {
   fetchDiaries(currentPage.value)
 })
+
+function capitalizeStatus(status) {
+  if (!status) return ''
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
 </script>
 
 <style scoped>
