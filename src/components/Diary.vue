@@ -161,8 +161,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import axios from 'axios'
 
+const LOCAL_STORAGE_KEY = 'diary_last_page'
+
 const diaries = ref([])
-const currentPage = ref(1)
+// Try to get last page from localStorage, fallback to 1
+const currentPage = ref(Number(localStorage.getItem(LOCAL_STORAGE_KEY)) || 1)
 const totalItems = ref(0)
 const pageSize = 10
 const totalPages = ref(1)
@@ -203,7 +206,9 @@ function resetModal() {
   })
 }
 
-async function fetchDiaries(page = 1) {
+async function fetchDiaries(page = currentPage.value) {
+  // Save the page to localStorage
+  localStorage.setItem(LOCAL_STORAGE_KEY, page)
   // Scroll to top when pagination changes
   window.scrollTo(0, 0);
 
@@ -331,7 +336,7 @@ function formatDate(dateStr) {
 }
 
 onMounted(() => {
-  fetchDiaries()
+  fetchDiaries(currentPage.value)
 })
 </script>
 
