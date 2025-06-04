@@ -49,12 +49,11 @@
               {{ formatDate(diary.post_date) }}
             </span>
           </div>
-          <div class="diary-card-content">
-            {{ diary.post_content.length > 120
-              ? diary.post_content.slice(0, 120) + '...'
-              : diary.post_content
-            }}
-          </div>
+          <div
+            v-html="diary.post_content.length > 120 ?
+            diary.post_content.slice(0, 120) + '...' :
+            diary.post_content" class="diary-card-content"
+          ></div>
           <div class="diary-card-actions">
             <a-button size="small" @click="viewDiary(diary)">
               <span class="material-symbols-outlined">visibility</span>
@@ -147,9 +146,7 @@
             {{ capitalizeStatus(modalForm.post_status) }}
           </span>
         </div>
-        <div class="diary-modal-content">
-          {{ modalForm.post_content }}
-        </div>
+        <div v-html="modalForm.post_content" class="diary-modal-content"></div>
       </div>
     </a-modal>
   </div>
