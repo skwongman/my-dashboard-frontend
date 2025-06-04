@@ -87,6 +87,7 @@
         :page-size="1"
         @change="fetchDiaries"
         show-less-items
+        :show-size-changer="false"
       />
     </div>
 
