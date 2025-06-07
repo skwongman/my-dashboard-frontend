@@ -243,7 +243,7 @@ async function fetchDiaries(page = currentPage.value) {
 function showCreateModal() {
   resetModal()
   modalMode.value = 'create'
-  modalTitle.value = 'Create Diary'
+  // modalTitle.value = 'Create Diary'
   modalVisible.value = true
 }
 
@@ -263,7 +263,7 @@ function editDiary(record) {
     id: record.id || record.ID
   })
   modalMode.value = 'edit'
-  modalTitle.value = 'Edit Diary'
+  // modalTitle.value = 'Edit Diary'
   modalVisible.value = true
 }
 
