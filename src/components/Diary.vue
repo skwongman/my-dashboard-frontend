@@ -106,9 +106,10 @@
       <a-form
         v-if="modalMode !== 'view'"
         :model="modalForm"
-        :label-col="{ span: 6 }"
-        :wrapper-col="{ span: 16 }"
+        :label-col="{ span: 24 }"
+        :wrapper-col="{ span: 24 }"
         ref="modalFormRef"
+        style="width: 100%;"
       >
         <a-form-item label="Title" name="post_title" :rules="[{ required: true, message: 'Title required' }]">
           <a-input v-model:value="modalForm.post_title" />
