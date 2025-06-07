@@ -24,7 +24,8 @@ export const useAuthStore = defineStore('auth', {
         this.user = {
           id: response.data.id,
           username: response.data.username,
-          email: response.data.email
+          email: response.data.email,
+          joinedDate: response.data.joinedDate,
         }
         this.token = response.data.accessToken
         this.isAuthenticated = true

@@ -213,7 +213,9 @@ const user = computed(() => ({
   avatar:
     authStore.user.avatar ||
     "https://i.pravatar.cc/150?u=" + authStore.user.email,
-  joinedDate: authStore.user.joinedDate || new Date().toLocaleDateString(),
+  joinedDate: authStore.user.joinedDate
+    ? new Date(authStore.user.joinedDate).toLocaleDateString('en-GB')
+    : new Date().toLocaleDateString('en-GB'),
   bio: authStore.user.bio || ""
 }))
 
