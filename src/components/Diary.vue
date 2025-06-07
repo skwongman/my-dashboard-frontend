@@ -660,6 +660,15 @@ function capitalizeStatus(status) {
   vertical-align: middle;
 }
 
+.diary-modal .ant-modal-content,
+.diary-modal .ant-modal-content input,
+.diary-modal .ant-modal-content textarea,
+.diary-modal .ant-modal-content .ant-select-selector,
+.diary-modal .ant-modal-content .ant-select-selection-item,
+.diary-modal .ant-modal-content .ant-form-item-label > label {
+  font-size: 15px; /* Adjust as needed */
+}
+
 /* Large tablet: 3 cards per row */
 @media (max-width: 1600px) {
   .diary-cards {
