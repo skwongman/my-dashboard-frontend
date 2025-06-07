@@ -476,17 +476,17 @@ function capitalizeStatus(status) {
   border-radius: 14px;
   text-transform: capitalize;
   margin-left: 4px;
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: #f3e8ff; /* soft purple */
+  color: #7c3aed;      /* deep purple */
   vertical-align: middle;
 }
 .diary-status.publish {
-  background: #d1fae5;
-  color: #059669;
+  background: #e0f2f1; /* soft teal */
+  color: #00897b;      /* teal */
 }
 .diary-status.draft {
-  background: #fef3c7;
-  color: #b45309;
+  background: #fdf6b2; /* soft yellow */
+  color: #b7791f;      /* dark gold */
 }
 
 .diary-date {
@@ -529,14 +529,14 @@ function capitalizeStatus(status) {
 
 /* Edit button: follow "draft" (private) style, no border */
 .diary-card-actions .ant-btn:not(.ant-btn-dangerous):nth-child(2) {
-  background: #fef3c7;
-  color: #b45309;
+  background: #e0f2fe; /* sky blue */
+  color: #0369a1;      /* deep sky blue text */
   font-weight: 600;
   border: none;
   font-size: 0.97rem;
 }
 .diary-card-actions .ant-btn:not(.ant-btn-dangerous):nth-child(2):hover {
-  background: #b45309;
+  background: #0369a1; /* deep sky blue */
   color: #fff;
 }
 
