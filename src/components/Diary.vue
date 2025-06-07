@@ -271,6 +271,13 @@ async function handleModalOk() {
     modalVisible.value = false
     return
   }
+  // Validate form before submit
+  try {
+    await modalFormRef.value.validate()
+  } catch (validationError) {
+    // Validation failed, do not proceed
+    return
+  }
   modalLoading.value = true
   try {
     if (modalMode.value === 'create') {
