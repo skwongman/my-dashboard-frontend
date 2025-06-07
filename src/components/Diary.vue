@@ -746,5 +746,10 @@ function capitalizeStatus(status) {
     border: none;
     font-size: 13px;
   }
+  .diary-card:hover {
+    /* Remove hover effect on mobile */
+    box-shadow: 0 6px 32px 0 rgba(80, 112, 255, 0.10), 0 2px 8px 0 rgba(80, 112, 255, 0.06);
+    transform: none;
+  }
 }
 </style>
