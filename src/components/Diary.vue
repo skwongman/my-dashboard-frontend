@@ -252,7 +252,7 @@ function viewDiary(record) {
     id: record.id || record.ID
   })
   modalMode.value = 'view'
-  modalTitle.value = 'View Diary'
+  // modalTitle.value = 'View Diary'
   modalVisible.value = true
 }
 
