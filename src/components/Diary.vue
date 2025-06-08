@@ -149,6 +149,28 @@
           </span>
         </div>
         <div v-html="modalForm.post_content" class="diary-modal-content"></div>
+        <!-- Comments Section -->
+        <div class="diary-comments-section">
+          <h3>Comments</h3>
+          <div v-if="modalForm.comments && modalForm.comments.length">
+            <div
+              v-for="comment in modalForm.comments"
+              :key="comment.comment_ID"
+              class="diary-comment"
+            >
+              <div class="diary-comment-header">
+                <span class="diary-comment-author">{{ comment.comment_author }}</span>
+                <span class="diary-comment-date">{{ formatDateTime(comment.comment_date) }}</span>
+              </div>
+              <div class="diary-comment-content">
+                <span v-html="comment.comment_content"></span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="diary-no-comments">
+            No comments yet.
+          </div>
+        </div>
       </div>
     </a-modal>
   </div>
@@ -244,10 +266,10 @@ function showCreateModal() {
 function viewDiary(record) {
   Object.assign(modalForm, {
     ...record,
-    id: record.id || record.ID
+    id: record.id || record.ID,
+    comments: record.comments || []
   })
   modalMode.value = 'view'
-  // modalTitle.value = 'View Diary'
   modalVisible.value = true
 }
 
@@ -349,6 +371,18 @@ onMounted(() => {
 function capitalizeStatus(status) {
   if (!status) return ''
   return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 </script>
 
@@ -662,6 +696,51 @@ function capitalizeStatus(status) {
 .diary-modal .ant-modal-content .ant-form-item-label > label {
   font-size: 15px; /* Adjust as needed */
 }
+
+.diary-comments-section {
+  margin-top: 32px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.diary-comments-section h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #2d3a4b;
+}
+.diary-comment {
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.diary-comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.diary-comment-author {
+  font-weight: 600;
+  color: #4f46e5;
+}
+.diary-comment-date {
+  font-size: 0.92rem;
+  color: #64748b;
+}
+.diary-comment-content {
+  font-size: 1rem;
+  color: #374151;
+  white-space: pre-line;
+}
+.diary-no-comments {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.98rem;
+  margin-top: 8px;
+}
+
 
 /* Large tablet: 3 cards per row */
 @media (max-width: 1600px) {
