@@ -33,10 +33,10 @@
                 <span class="font-medium text-gray-700">Humidity:</span>
                 {{ mainWeather.humidity }}%
               </span>
-              <span v-if="uvIndex.value.value">
+              <span v-if="uvIndex.value.value !== ''">
                 <span class="font-medium text-gray-700">UV:</span>
                 {{ uvIndex.value }}
-                <span class="text-xs">({{ uvIndex.desc }})</span>
+                <span>({{ uvIndex.desc }})</span>
               </span>
             </div>
           </div>
