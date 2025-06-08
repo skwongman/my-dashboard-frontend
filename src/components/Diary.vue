@@ -737,24 +737,12 @@ function capitalizeStatus(status) {
     padding: 15px 20px; /* Adjusted padding for smaller screens */
   }
   .diary-card-actions .ant-btn:not(.ant-btn-dangerous):first-child {
-    background: #d1fae5;
-    color: #059669;
-    font-weight: 600;
-    border: none;
     font-size: 13px;
   }
   .diary-card-actions .ant-btn:not(.ant-btn-dangerous):nth-child(2) {
-    background: #fef3c7;
-    color: #b45309;
-    font-weight: 600;
-    border: none;
     font-size: 13px;
   }
   .diary-card-actions .ant-btn-dangerous {
-    background: #fee2e2;
-    color: #dc2626;
-    font-weight: 600;
-    border: none;
     font-size: 13px;
   }
   .diary-card:hover {
