@@ -129,20 +129,14 @@
         <div class="diary-modal-meta">
           <span>
             <span class="material-symbols-outlined">calendar_month</span>
-            {{ (() => {
-              const d = new Date(modalForm.post_date)
-              const parts = d.toLocaleString(undefined, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                weekday: 'short',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-              }).match(/^(\w+),? (\d{1,2}) (\w{3}) (\d{4}),? (.+)$/)
-              // parts: [full, weekday, day, month, year, time]
-              return parts ? `${parts[2]} ${parts[3]} ${parts[4]} (${parts[1]}), ${parts[5]}` : ''
-            })() }}
+            {{ new Date(modalForm.post_date).toLocaleString(undefined, {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: 'numeric',
+              hour12: true
+            }) }}
           </span>
           <span
             class="diary-status"
