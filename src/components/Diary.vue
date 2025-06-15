@@ -150,9 +150,8 @@
         </div>
         <div v-html="modalForm.post_content" class="diary-modal-content"></div>
         <!-- Comments Section -->
-        <div class="diary-comments-section">
+        <div v-if="modalForm.comments && modalForm.comments.length" class="diary-comments-section">
           <h3>Comments</h3>
-          <div v-if="modalForm.comments && modalForm.comments.length">
             <div
               v-for="comment in modalForm.comments"
               :key="comment.comment_ID"
@@ -166,10 +165,6 @@
                 <span v-html="comment.comment_content"></span>
               </div>
             </div>
-          </div>
-          <div v-else class="diary-no-comments">
-            No comments yet.
-          </div>
         </div>
       </div>
     </a-modal>
