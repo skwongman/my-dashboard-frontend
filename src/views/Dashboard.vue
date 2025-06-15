@@ -12,25 +12,25 @@
       </div>
       <a-menu theme="dark" mode="inline" :selected-keys="[currentMenu]">
         <a-menu-item key="dashboard" @click="currentMenu = 'dashboard'; collapsed = true">
-        <dashboard-outlined />
-        <span>Dashboard</span>
-      </a-menu-item>
-      <a-menu-item key="weather" @click="currentMenu = 'weather'; collapsed = true">
-        <cloud-outlined />
-        <span>Weather</span>
-      </a-menu-item>
-      <a-menu-item key="hknews" @click="currentMenu = 'hknews'; collapsed = true">
-        <read-outlined />
-        <span>HK News</span>
-      </a-menu-item>
-      <a-menu-item key="jpnews" @click="currentMenu = 'jpnews'; collapsed = true">
-        <notification-outlined />
-        <span>JP News</span>
-      </a-menu-item>
-      <a-menu-item key="diary" @click="currentMenu = 'diary'; collapsed = true">
-        <book-outlined />
-        <span>Diary</span>
-      </a-menu-item>
+          <dashboard-outlined />
+          <span>Dashboard</span>
+        </a-menu-item>
+        <a-menu-item key="weather" @click="currentMenu = 'weather'; collapsed = true">
+          <cloud-outlined />
+          <span>Weather</span>
+        </a-menu-item>
+        <a-menu-item key="hknews" @click="currentMenu = 'hknews'; collapsed = true">
+          <read-outlined />
+          <span>HK News</span>
+        </a-menu-item>
+        <a-menu-item key="jpnews" @click="currentMenu = 'jpnews'; collapsed = true">
+          <notification-outlined />
+          <span>JP News</span>
+        </a-menu-item>
+        <a-menu-item key="diary" @click="currentMenu = 'diary'; collapsed = true">
+          <book-outlined />
+          <span>Diary</span>
+        </a-menu-item>
       </a-menu>
     </a-layout-sider>
 
