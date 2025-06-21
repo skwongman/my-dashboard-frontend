@@ -15,6 +15,10 @@
           <dashboard-outlined />
           <span>Dashboard</span>
         </a-menu-item>
+        <a-menu-item key="todo" @click="currentMenu = 'todo'; collapsed = true">
+          <check-circle-outlined />
+          <span>Todo</span>
+        </a-menu-item>
         <a-menu-item key="weather" @click="currentMenu = 'weather'; collapsed = true">
           <cloud-outlined />
           <span>Weather</span>
@@ -161,6 +165,7 @@
             </div>
           </a-card>
         </template>
+        <Todo v-else-if="currentMenu === 'todo'" />
         <Weather v-else-if="currentMenu === 'weather'" />
         <JPNews v-else-if="currentMenu === 'jpnews'" />
         <HKNews v-else-if="currentMenu === 'hknews'" />
@@ -195,6 +200,7 @@ import Weather from "../components/Weather.vue"
 import JPNews from "../components/JPNews.vue"
 import HKNews from "../components/HKNews.vue"
 import Diary from "../components/Diary.vue"
+import Todo from "../components/Todo.vue"
 
 const authStore = useAuthStore()
 const router = useRouter()
