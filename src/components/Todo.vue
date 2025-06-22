@@ -269,6 +269,10 @@ import {
   RadioGroup as ARadioGroup
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 const HK_HOLIDAYS = ref([]);
 const today = new Date();
@@ -372,7 +376,9 @@ function getHoliday(date) {
 }
 
 function isToday(date) {
-  return date === new Date().toISOString().slice(0, 10);
+  // 'Asia/Hong_Kong' ensures correct date in HK time
+  const hkToday = dayjs().tz('Asia/Hong_Kong').format('YYYY-MM-DD');
+  return date === hkToday;
 }
 
 // Inline add todo logic
