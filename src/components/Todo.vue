@@ -45,7 +45,8 @@
                   :class="{ 'sunday-date': isSunday(day.fullDate) }"
                   style="display: flex; align-items: center;"
                 >
-                  {{ day.date }}
+                  <span style="margin-right: 3px;">{{ day.date }}</span>
+                  <span class="day-abbr" v-if="day.date">{{ `(${getDayAbbr(day.fullDate)})` }}</span>
                 </span>
                 <span v-if="isHoliday(day.fullDate)" style="display: flex; align-items: center;">
                   <heart-filled style="color:#ff4d4f; margin-left:4px;" />
@@ -837,6 +838,12 @@ function handleModalCancel() {
   modalVisible.value = false;
 }
 
+function getDayAbbr(fullDate) {
+  if (!fullDate) return '';
+  const d = new Date(fullDate);
+  return weekDays[d.getDay()];
+}
+
 onMounted(fetchTodos);
 </script>
 
@@ -1160,6 +1167,12 @@ onMounted(fetchTodos);
     font-size: 12px;
     height: 22px;
     padding: 1px 3px;
+  }
+}
+
+@media (min-width: 501px) {
+  .day-abbr {
+    display: none;
   }
 }
 
