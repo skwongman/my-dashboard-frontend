@@ -59,7 +59,7 @@
             class="trigger"
             @click="collapsed = !collapsed"
           />
-          <div class="flex items-center space-x-4 ml-auto">
+          <div class="flex items-center space-x-3 ml-auto">
             <a-avatar :src="user.avatar" size="large" />
             <span class="font-semibold text-white">{{ user.username }}</span>
             <a-button type="primary" danger @click="logout">Logout</a-button>
@@ -218,7 +218,7 @@ const user = computed(() => ({
   ...authStore.user,
   avatar:
     authStore.user.avatar ||
-    "https://i.pravatar.cc/150?u=" + authStore.user.email,
+    "https://firebasestorage.googleapis.com/v0/b/blog-website-ff32a.appspot.com/o/VOQ5ydlh?alt=media", // hardcode the avatar temporarily
   joinedDate: authStore.user.joinedDate
     ? new Date(authStore.user.joinedDate).toLocaleDateString('en-GB')
     : new Date().toLocaleDateString('en-GB'),
