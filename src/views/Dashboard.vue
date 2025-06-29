@@ -35,6 +35,10 @@
           <book-outlined />
           <span>Diary</span>
         </a-menu-item>
+        <a-menu-item key="asset" @click="currentMenu = 'asset'; collapsed = true">
+          <dollar-outlined />
+          <span>Asset</span>
+        </a-menu-item>
       </a-menu>
     </a-layout-sider>
 
@@ -170,6 +174,7 @@
         <JPNews v-else-if="currentMenu === 'jpnews'" />
         <HKNews v-else-if="currentMenu === 'hknews'" />
         <Diary v-else-if="currentMenu === 'diary'" />
+        <Asset v-else-if="currentMenu === 'asset'" />
       </a-layout-content>
     </a-layout>
   </a-layout>
@@ -195,12 +200,14 @@ import {
   ReadOutlined,
   NotificationOutlined,
   BookOutlined,
+  DollarOutlined
 } from "@ant-design/icons-vue"
 import Weather from "../components/Weather.vue"
 import JPNews from "../components/JPNews.vue"
 import HKNews from "../components/HKNews.vue"
 import Diary from "../components/Diary.vue"
 import Todo from "../components/Todo.vue"
+import Asset from "../components/Asset.vue"
 
 const authStore = useAuthStore()
 const router = useRouter()
