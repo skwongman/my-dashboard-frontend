@@ -270,7 +270,11 @@ const showValues = ref(
 // --- Data fetching with API pagination ---
 async function fetchAssets(page = 1) {
   loading.value = true;
+  data.value = []
   try {
+    // Introduce a 500ms delay before the fetch
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     const params = new URLSearchParams({
       page,
     });
@@ -289,9 +293,7 @@ async function fetchAssets(page = 1) {
   } catch (e) {
     message.error('Failed to load assets');
   } finally {
-    setTimeout(() => {
-      loading.value = false;
-    }, 500);
+    loading.value = false; // No delay here now, unless you still want it
   }
 }
 
