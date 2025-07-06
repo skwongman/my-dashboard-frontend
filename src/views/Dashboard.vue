@@ -39,6 +39,10 @@
           <dollar-outlined />
           <span>Asset</span>
         </a-menu-item>
+        <a-menu-item key="mtr" @click="currentMenu = 'mtr'; collapsed = true">
+          <car-outlined />
+          <span>MTR</span>
+        </a-menu-item>
       </a-menu>
     </a-layout-sider>
 
@@ -175,6 +179,7 @@
         <HKNews v-else-if="currentMenu === 'hknews'" />
         <Diary v-else-if="currentMenu === 'diary'" />
         <Asset v-else-if="currentMenu === 'asset'" />
+        <Mtr v-else-if="currentMenu === 'mtr'" />
       </a-layout-content>
     </a-layout>
   </a-layout>
@@ -200,7 +205,8 @@ import {
   ReadOutlined,
   NotificationOutlined,
   BookOutlined,
-  DollarOutlined
+  DollarOutlined,
+  CarOutlined
 } from "@ant-design/icons-vue"
 import Weather from "../components/Weather.vue"
 import JPNews from "../components/JPNews.vue"
@@ -208,6 +214,7 @@ import HKNews from "../components/HKNews.vue"
 import Diary from "../components/Diary.vue"
 import Todo from "../components/Todo.vue"
 import Asset from "../components/Asset.vue"
+import Mtr from "../components/Mtr.vue"
 
 const authStore = useAuthStore()
 const router = useRouter()
