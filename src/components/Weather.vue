@@ -168,10 +168,10 @@ const iconDescMap = {
 const fetchWeather = async () => {
   loading.value = true
   try {
-    const res = await fetch(
-      "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en"
-    )
+    const res = await fetch("https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en")
+    const resChi = await fetch("https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc")
     const data = await res.json()
+    const dataChi = await resChi.json()
 
     // Main weather (Hong Kong Observatory)
     const hkoTemp = data.temperature.data.find(
@@ -199,7 +199,7 @@ const fetchWeather = async () => {
     } else {
       updateTime.value = ""
     }
-    warnings.value = data.warningMessage || []
+    warnings.value = dataChi.warningMessage || []
 
     // UV Index
     if (data.uvindex?.data?.length) {
