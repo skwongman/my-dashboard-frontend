@@ -364,7 +364,19 @@ async function fetchTodos() {
 
 function todosByDate(date) {
   if (!date) return [];
-  return todos.value.filter(todo => todo.date === date);
+  return todos.value
+    .filter(todo => todo.date === date)
+    .sort((a, b) => {
+      // If both have time, compare time
+      if (a.time && b.time) {
+        return a.time.localeCompare(b.time);
+      }
+      // If only one has time, that one comes after
+      if (a.time && !b.time) return 1;
+      if (!a.time && b.time) return -1;
+      // If neither has time, sort by id as fallback
+      return a.id - b.id;
+    });
 }
 
 function isHoliday(date) {
