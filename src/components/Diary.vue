@@ -34,7 +34,7 @@
           <div class="diary-card-header">
             <div>
               <span class="diary-title">{{ diary.post_title }}</span>
-              <span
+              <!-- <span
                 class="diary-status"
                 :class="{
                   publish: diary.post_status === 'publish',
@@ -42,7 +42,7 @@
                 }"
               >
                 {{ capitalizeStatus(diary.post_status) }}
-              </span>
+              </span> -->
             </div>
             <span class="diary-date">
               <span class="material-symbols-outlined">calendar_month</span>
