@@ -155,7 +155,7 @@ const fetchNews = async (reset = false) => {
   try {
     const pageSize = 12
     const pageNo = page.value + 1
-    const apiUrl = `https://d3sli7vh0lsda4.cloudfront.net/api/getNewsList?category=119&pageNo=${pageNo}&pageSize=${pageSize}`
+    const apiUrl = `https://newsapi1.now.com/pccw-news-api/api/getNewsListv2?category=119&pageNo=${pageNo}&pageSize=${pageSize}`
     // Delay 1s before fetching
     await new Promise(resolve => setTimeout(resolve, 500))
     const res = await fetch(apiUrl)
