@@ -43,6 +43,10 @@
           <car-outlined />
           <span>MTR</span>
         </a-menu-item>
+        <a-menu-item key="weight" @click="currentMenu = 'weight'; collapsed = true">
+          <line-chart-outlined />
+          <span>Weight</span>
+        </a-menu-item>
       </a-menu>
     </a-layout-sider>
 
@@ -180,6 +184,7 @@
         <Diary v-else-if="currentMenu === 'diary'" />
         <Asset v-else-if="currentMenu === 'asset'" />
         <Mtr v-else-if="currentMenu === 'mtr'" />
+        <Weight v-else-if="currentMenu === 'weight'" />
       </a-layout-content>
     </a-layout>
   </a-layout>
@@ -206,7 +211,8 @@ import {
   NotificationOutlined,
   BookOutlined,
   DollarOutlined,
-  CarOutlined
+  CarOutlined,
+  LineChartOutlined
 } from "@ant-design/icons-vue"
 import Weather from "../components/Weather.vue"
 import JPNews from "../components/JPNews.vue"
@@ -215,6 +221,7 @@ import Diary from "../components/Diary.vue"
 import Todo from "../components/Todo.vue"
 import Asset from "../components/Asset.vue"
 import Mtr from "../components/Mtr.vue"
+import Weight from "../components/Weight.vue"
 
 const authStore = useAuthStore()
 const router = useRouter()
