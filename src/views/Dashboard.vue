@@ -11,45 +11,31 @@
         <h2 class="text-white text-start py-4">My App</h2>
       </div>
       <a-menu theme="dark" mode="inline" :selected-keys="[currentMenu]">
-        <a-menu-item key="dashboard" @click="currentMenu = 'dashboard'; collapsed = true">
-          <dashboard-outlined />
-          <span>Dashboard</span>
-        </a-menu-item>
-        <a-menu-item key="todo" @click="currentMenu = 'todo'; collapsed = true">
-          <check-circle-outlined />
-          <span>Todo</span>
-        </a-menu-item>
-        <a-menu-item key="weather" @click="currentMenu = 'weather'; collapsed = true">
-          <cloud-outlined />
-          <span>Weather</span>
-        </a-menu-item>
-        <a-menu-item key="hknews" @click="currentMenu = 'hknews'; collapsed = true">
-          <read-outlined />
-          <span>HK News</span>
-        </a-menu-item>
-        <a-menu-item key="jpnews" @click="currentMenu = 'jpnews'; collapsed = true">
-          <notification-outlined />
-          <span>JP News</span>
-        </a-menu-item>
-        <a-menu-item key="diary" @click="currentMenu = 'diary'; collapsed = true">
-          <book-outlined />
-          <span>Diary</span>
-        </a-menu-item>
-        <a-menu-item key="asset" @click="currentMenu = 'asset'; collapsed = true">
-          <dollar-outlined />
-          <span>Asset</span>
-        </a-menu-item>
-        <a-menu-item key="mtr" @click="currentMenu = 'mtr'; collapsed = true">
-          <car-outlined />
-          <span>MTR</span>
-        </a-menu-item>
-        <a-menu-item key="transportation" @click="currentMenu = 'transportation'; collapsed = true">
-          <rocket-outlined />
-          <span>Transportation</span>
-        </a-menu-item>
-        <a-menu-item key="weight" @click="currentMenu = 'weight'; collapsed = true">
-          <line-chart-outlined />
-          <span>Weight</span>
+        <a-menu-item
+          v-for="(item, index) in menuItems"
+          :key="item.key"
+          @click="currentMenu = item.key; collapsed = true"
+          :draggable="true"
+          @dragstart="handleDragStart(index)"
+          @dragover.prevent="handleDragOver(index)"
+          @dragleave="handleDragLeave"
+          @drop="handleDrop(index)"
+          class="draggable-item"
+          :class="{ 'drag-over': index === dragOverIndex }"
+        >
+          <template #icon>
+            <DashboardOutlined v-if="item.key === 'dashboard'" />
+            <CheckCircleOutlined v-if="item.key === 'todo'" />
+            <CloudOutlined v-if="item.key === 'weather'" />
+            <ReadOutlined v-if="item.key === 'hknews'" />
+            <NotificationOutlined v-if="item.key === 'jpnews'" />
+            <BookOutlined v-if="item.key === 'diary'" />
+            <DollarOutlined v-if="item.key === 'asset'" />
+            <CarOutlined v-if="item.key === 'mtr'" />
+            <RocketOutlined v-if="item.key === 'transportation'" />
+            <LineChartOutlined v-if="item.key === 'weight'" />
+          </template>
+          <span>{{ item.label }}</span>
         </a-menu-item>
       </a-menu>
     </a-layout-sider>
@@ -196,10 +182,10 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, watch, onMounted, onUnmounted } from "vue"
-import { useRouter } from "vue-router"
-import { useAuthStore } from "../stores/auth"
-import { message } from "ant-design-vue"
+import { ref, computed, reactive, watch, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../stores/auth";
+import { message } from "ant-design-vue";
 import {
   DashboardOutlined,
   UserOutlined,
@@ -218,129 +204,178 @@ import {
   DollarOutlined,
   CarOutlined,
   LineChartOutlined
-} from "@ant-design/icons-vue"
-import Weather from "../components/Weather.vue"
-import JPNews from "../components/JPNews.vue"
-import HKNews from "../components/HKNews.vue"
-import Diary from "../components/Diary.vue"
-import Todo from "../components/Todo.vue"
-import Asset from "../components/Asset.vue"
-import Mtr from "../components/Mtr.vue"
-import Transportation from "../components/Transportation.vue"
-import Weight from "../components/Weight.vue"
+} from "@ant-design/icons-vue";
+import Weather from "../components/Weather.vue";
+import JPNews from "../components/JPNews.vue";
+import HKNews from "../components/HKNews.vue";
+import Diary from "../components/Diary.vue";
+import Todo from "../components/Todo.vue";
+import Asset from "../components/Asset.vue";
+import Mtr from "../components/Mtr.vue";
+import Transportation from "../components/Transportation.vue";
+import Weight from "../components/Weight.vue";
 
-const authStore = useAuthStore()
-const router = useRouter()
-const collapsed = ref(true)
-const currentMenu = ref(localStorage.getItem('currentMenu') || "dashboard")
+const defaultMenuItems = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'todo', label: 'Todo' },
+  { key: 'weather', label: 'Weather' },
+  { key: 'hknews', label: 'HK News' },
+  { key: 'jpnews', label: 'JP News' },
+  { key: 'diary', label: 'Diary' },
+  { key: 'asset', label: 'Asset' },
+  { key: 'mtr', label: 'MTR' },
+  { key: 'transportation', label: 'Transportation' },
+  { key: 'weight', label: 'Weight' },
+];
+
+const menuItems = ref([]);
+const draggedIndex = ref(null);
+const dragOverIndex = ref(null);
+
+const handleDragStart = (index) => {
+  draggedIndex.value = index;
+};
+
+const handleDragOver = (index) => {
+  dragOverIndex.value = index;
+};
+
+const handleDragLeave = () => {
+  dragOverIndex.value = null;
+};
+
+const handleDrop = (targetIndex) => {
+  if (draggedIndex.value === null || draggedIndex.value === targetIndex) {
+    dragOverIndex.value = null;
+    return;
+  }
+  const draggedItem = menuItems.value.splice(draggedIndex.value, 1)[0];
+  menuItems.value.splice(targetIndex, 0, draggedItem);
+  
+  saveMenuOrder();
+  draggedIndex.value = null;
+  dragOverIndex.value = null;
+};
+
+const saveMenuOrder = () => {
+  const order = menuItems.value.map(item => item.key);
+  localStorage.setItem('dashboardMenuOrder', JSON.stringify(order));
+};
+
+onMounted(() => {
+  const savedOrder = localStorage.getItem('dashboardMenuOrder');
+  if (savedOrder) {
+    try {
+      const order = JSON.parse(savedOrder);
+      const orderedItems = order
+        .map(key => defaultMenuItems.find(item => item.key === key))
+        .filter(item => item);
+      
+      const newItems = defaultMenuItems.filter(item => !order.includes(item.key));
+      menuItems.value = [...orderedItems, ...newItems];
+    } catch (e) {
+      menuItems.value = [...defaultMenuItems];
+    }
+  } else {
+    menuItems.value = [...defaultMenuItems];
+  }
+});
+
+
+const authStore = useAuthStore();
+const router = useRouter();
+const collapsed = ref(true);
+const currentMenu = ref(localStorage.getItem('currentMenu') || "dashboard");
 const API_URL = import.meta.env.DEV
   ? import.meta.env.VITE_API_URL_LOCAL
-  : import.meta.env.VITE_API_URL_LIVE
+  : import.meta.env.VITE_API_URL_LIVE;
 
 watch(currentMenu, (val) => {
-  localStorage.setItem('currentMenu', val)
-})
+  if (menuItems.value.find(i => i.key === val)) {
+      localStorage.setItem('currentMenu', val);
+  }
+});
 
 const user = computed(() => ({
   ...authStore.user,
   avatar:
     authStore.user.avatar ||
-    "https://firebasestorage.googleapis.com/v0/b/blog-website-ff32a.appspot.com/o/VOQ5ydlh?alt=media", // hardcode the avatar temporarily
+    "https://firebasestorage.googleapis.com/v0/b/blog-website-ff32a.appspot.com/o/VOQ5ydlh?alt=media",
   joinedDate: authStore.user.joinedDate
     ? new Date(authStore.user.joinedDate).toLocaleDateString('en-GB')
     : new Date().toLocaleDateString('en-GB'),
   bio: authStore.user.bio || ""
-}))
+}));
 
 const form = reactive({
   username: user.value.username,
   password: ""
-})
+});
 
 watch(
   () => user.value.username,
   (newUsername) => {
-    form.username = newUsername
+    form.username = newUsername;
   }
-)
+);
 
 const beforeUpload = (file) => {
-  const isImage = file.type.startsWith("image/")
+  const isImage = file.type.startsWith("image/");
   if (!isImage) {
-    message.error("You can only upload image files!")
+    message.error("You can only upload image files!");
   }
-  return isImage
-}
+  return isImage;
+};
 
 const handleAvatarChange = ({ file }) => {
   if (file.status === "done" || file.status === "uploading") {
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = (e) => {
-      authStore.updateUser({ avatar: e.target.result })
-      message.success("Avatar updated successfully")
-    }
-    reader.readAsDataURL(file.originFileObj)
+      authStore.updateUser({ avatar: e.target.result });
+      message.success("Avatar updated successfully");
+    };
+    reader.readAsDataURL(file.originFileObj);
   }
-}
+};
 
 const saveProfile = async () => {
   try {
-    // Update username if changed
     if (form.username !== user.value.username) {
       const res = await fetch(`${API_URL}/users/username`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authStore.token}`
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ username: form.username })
-      })
-      if (!res.ok) throw new Error("Failed to update username")
-      const data = await res.json()
-      authStore.updateUser({ username: data.user.username })
-      message.success("Username updated successfully")
+      });
+      if (!res.ok) throw new Error("Failed to update username");
+      const data = await res.json();
+      authStore.updateUser({ username: data.user.username });
+      message.success("Username updated successfully");
     }
 
-    // Update password if provided
     if (form.password) {
       const res = await fetch(`${API_URL}/users/password`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authStore.token}`
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ password: form.password })
-      })
-      if (!res.ok) throw new Error("Failed to update password")
-      message.success("Password updated successfully")
-      form.password = ""
+      });
+      if (!res.ok) throw new Error("Failed to update password");
+      message.success("Password updated successfully");
+      form.password = "";
     }
   } catch (err) {
-    message.error(err.message || "Update failed")
+    message.error(err.message || "Update failed");
   }
-}
+};
 
 const logout = () => {
-  authStore.logout()
-  message.success("Logged out successfully")
-  router.push("/login")
-}
-
-// watch(
-//   () => currentMenu.value,
-//   (val) => {
-//     if (val === "jpnews" || val === "hknews") {
-//       document.body.style.overflow = "hidden"
-//     } else {
-//       document.body.style.overflow = ""
-//     }
-//   },
-//   { immediate: true }
-// )
+  authStore.logout();
+  message.success("Logged out successfully");
+  router.push("/login");
+};
 
 onUnmounted(() => {
-  document.body.style.overflow = ""
-})
+  document.body.style.overflow = "";
+});
 </script>
 
 <style>
@@ -397,6 +432,14 @@ onUnmounted(() => {
   background: #1890ff;
   color: white;
   border-radius: 12px 12px 0 0;
+}
+
+.draggable-item {
+  cursor: grab;
+}
+
+.draggable-item.drag-over {
+  border-top: 2px solid #1890ff;
 }
 </style>
 
@@ -459,20 +502,6 @@ onUnmounted(() => {
     flex-direction: column !important;
     gap: 10px !important;
   }
-  /* REMOVE the .ant-avatar and .ant-btn rules below! */
-  /*
-  .ant-avatar {
-    width: 60px !important;
-    height: 60px !important;
-    min-width: 60px !important;
-    min-height: 60px !important;
-  }
-  .ant-btn {
-    width: 100%;
-    font-size: 1rem;
-    height: 40px;
-  }
-  */
   .ant-tabs-nav {
     flex-wrap: wrap;
     font-size: 1rem;
