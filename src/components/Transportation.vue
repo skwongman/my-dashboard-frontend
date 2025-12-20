@@ -26,19 +26,19 @@
       ></a-select>
 
       <a-row :gutter="[16, 16]">
-        <!-- Down Direction -->
+        <!-- Left Column -->
         <a-col :xs="24" :lg="12">
           <div class="direction-header">
-            <ArrowDownOutlined />
-            <span>{{ lineData[currentLine].down_label }}</span>
+            <component :is="leftColumn.icon" />
+            <span>{{ leftColumn.label }}</span>
           </div>
-          <div v-if="loading && !downArrivals.length" class="loading-placeholder">
+          <div v-if="loading && !leftColumn.arrivals.length" class="loading-placeholder">
             <a-spin />
           </div>
-          <div v-else-if="downArrivals.length">
+          <div v-else-if="leftColumn.arrivals.length">
             <a-card
-              v-for="(train, index) in downArrivals"
-              :key="`down-${index}`"
+              v-for="(train, index) in leftColumn.arrivals"
+              :key="`left-${index}`"
               class="arrival-card"
             >
               <div class="arrival-info">
@@ -70,19 +70,19 @@
           </div>
         </a-col>
 
-        <!-- Up Direction -->
+        <!-- Right Column -->
         <a-col :xs="24" :lg="12">
           <div class="direction-header">
-            <ArrowUpOutlined />
-            <span>{{ lineData[currentLine].up_label }}</span>
+            <component :is="rightColumn.icon" />
+            <span>{{ rightColumn.label }}</span>
           </div>
-          <div v-if="loading && !upArrivals.length" class="loading-placeholder">
+          <div v-if="loading && !rightColumn.arrivals.length" class="loading-placeholder">
             <a-spin />
           </div>
-          <div v-else-if="upArrivals.length">
+          <div v-else-if="rightColumn.arrivals.length">
             <a-card
-              v-for="(train, index) in upArrivals"
-              :key="`up-${index}`"
+              v-for="(train, index) in rightColumn.arrivals"
+              :key="`right-${index}`"
               class="arrival-card"
             >
               <div class="arrival-info">
@@ -183,8 +183,37 @@ const stationOptions = computed(() => {
         const reversedMainline = [...mainLineStations].reverse();
         return reversedMainline.map(s => ({ value: s.code, label: s.name_zh }));
     }
-    // For SIL, display as is
     return stations.map(s => ({ value: s.code, label: s.name_zh }));
+});
+
+const leftColumn = computed(() => {
+    if (currentLine.value === 'SIL') {
+        return {
+            label: lineData.SIL.up_label,
+            arrivals: upArrivals.value,
+            icon: ArrowDownOutlined
+        };
+    }
+    return {
+        label: lineData.EAL.down_label,
+        arrivals: downArrivals.value,
+        icon: ArrowDownOutlined
+    };
+});
+
+const rightColumn = computed(() => {
+    if (currentLine.value === 'SIL') {
+        return {
+            label: lineData.SIL.down_label,
+            arrivals: downArrivals.value,
+            icon: ArrowUpOutlined
+        };
+    }
+    return {
+        label: lineData.EAL.up_label,
+        arrivals: upArrivals.value,
+        icon: ArrowUpOutlined
+    };
 });
 
 const getStationNameZh = (code) => {
@@ -195,13 +224,11 @@ const getStationNameZh = (code) => {
 
 const toggleLine = () => {
     currentLine.value = currentLine.value === 'EAL' ? 'SIL' : 'EAL';
-    // Set default station for the new line
     if (currentLine.value === 'EAL') {
-        selectedStation.value = 'FAN'; // Set default to Fanling for EAL
+        selectedStation.value = 'FAN'; 
     } else {
-        selectedStation.value = lineData.SIL.stations[0].code; // Set default to first station for SIL
+        selectedStation.value = lineData.SIL.stations[0].code;
     }
-    // Clear old data and fetch new
     upArrivals.value = [];
     downArrivals.value = [];
     fetchData();
