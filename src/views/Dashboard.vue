@@ -43,6 +43,10 @@
           <car-outlined />
           <span>MTR</span>
         </a-menu-item>
+        <a-menu-item key="transportation" @click="currentMenu = 'transportation'; collapsed = true">
+          <rocket-outlined />
+          <span>Transportation</span>
+        </a-menu-item>
         <a-menu-item key="weight" @click="currentMenu = 'weight'; collapsed = true">
           <line-chart-outlined />
           <span>Weight</span>
@@ -184,6 +188,7 @@
         <Diary v-else-if="currentMenu === 'diary'" />
         <Asset v-else-if="currentMenu === 'asset'" />
         <Mtr v-else-if="currentMenu === 'mtr'" />
+        <Transportation v-else-if="currentMenu === 'transportation'" />
         <Weight v-else-if="currentMenu === 'weight'" />
       </a-layout-content>
     </a-layout>
@@ -221,6 +226,7 @@ import Diary from "../components/Diary.vue"
 import Todo from "../components/Todo.vue"
 import Asset from "../components/Asset.vue"
 import Mtr from "../components/Mtr.vue"
+import Transportation from "../components/Transportation.vue"
 import Weight from "../components/Weight.vue"
 
 const authStore = useAuthStore()
