@@ -14,7 +14,7 @@
         <a-menu-item
           v-for="(item, index) in menuItems"
           :key="item.key"
-          @click="currentMenu = item.key; collapsed = true"
+          @click="handleMenuClick(item.key)"
           :draggable="true"
           @dragstart="handleDragStart(index)"
           @dragover.prevent="handleDragOver(index)"
@@ -262,6 +262,13 @@ const handleDrop = (targetIndex) => {
   dragOverIndex.value = null;
 };
 
+const handleMenuClick = (key) => {
+  currentMenu.value = key;
+  if (window.innerWidth <= 600) {
+    collapsed.value = true;
+  }
+};
+
 const saveMenuOrder = () => {
   const order = menuItems.value.map(item => item.key);
   localStorage.setItem('dashboardMenuOrder', JSON.stringify(order));
@@ -289,11 +296,19 @@ onMounted(() => {
 
 const authStore = useAuthStore();
 const router = useRouter();
-const collapsed = ref(true);
+const collapsed = ref(
+  window.innerWidth <= 600 ? true : JSON.parse(localStorage.getItem('sidebarCollapsed') || 'true')
+);
 const currentMenu = ref(localStorage.getItem('currentMenu') || "dashboard");
 const API_URL = import.meta.env.DEV
   ? import.meta.env.VITE_API_URL_LOCAL
   : import.meta.env.VITE_API_URL_LIVE;
+
+watch(collapsed, (newVal) => {
+  if (window.innerWidth > 600) {
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(newVal));
+  }
+});
 
 watch(currentMenu, (val) => {
   if (menuItems.value.find(i => i.key === val)) {
