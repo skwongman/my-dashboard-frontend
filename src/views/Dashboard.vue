@@ -34,6 +34,7 @@
             <CarOutlined v-if="item.key === 'mtr'" />
             <RocketOutlined v-if="item.key === 'transportation'" />
             <LineChartOutlined v-if="item.key === 'weight'" />
+            <ThunderboltOutlined v-if="item.key === 'kmb'" />
           </template>
           <span>{{ item.label }}</span>
         </a-menu-item>
@@ -176,6 +177,7 @@
         <Mtr v-else-if="currentMenu === 'mtr'" />
         <Transportation v-else-if="currentMenu === 'transportation'" />
         <Weight v-else-if="currentMenu === 'weight'" />
+        <Kmb v-else-if="currentMenu === 'kmb'" />
       </a-layout-content>
     </a-layout>
   </a-layout>
@@ -203,7 +205,8 @@ import {
   BookOutlined,
   DollarOutlined,
   CarOutlined,
-  LineChartOutlined
+  LineChartOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons-vue";
 import Weather from "../components/Weather.vue";
 import JPNews from "../components/JPNews.vue";
@@ -214,6 +217,7 @@ import Asset from "../components/Asset.vue";
 import Mtr from "../components/Mtr.vue";
 import Transportation from "../components/Transportation.vue";
 import Weight from "../components/Weight.vue";
+import Kmb from "../components/Kmb.vue";
 
 const defaultMenuItems = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -226,6 +230,7 @@ const defaultMenuItems = [
   { key: 'mtr', label: 'MTR' },
   { key: 'transportation', label: 'Transportation' },
   { key: 'weight', label: 'Weight' },
+  { key: 'kmb', label: 'KMB' },
 ];
 
 const menuItems = ref([]);
