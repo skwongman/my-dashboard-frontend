@@ -1,5 +1,8 @@
 <template>
-  <a-card class="todo-calendar">
+  <a-card class="todo-calendar" :class="{ 
+    'mobile-grid-view': isMobile && mobileViewMode === 'grid', 
+    'mobile-list-view': isMobile && mobileViewMode === 'list' 
+  }">
     <a-spin :spinning="loadingTodos">
       <div class="calendar-header">
         <a-space>
@@ -13,6 +16,12 @@
             <template #icon><right-outlined /></template>
           </a-button>
         </a-space>
+        <a-button v-if="isMobile" @click="toggleMobileView" type="text" class="view-toggle-btn">
+          <template #icon>
+            <appstore-outlined v-if="mobileViewMode === 'list'" />
+            <unordered-list-outlined v-if="mobileViewMode === 'grid'" />
+          </template>
+        </a-button>
       </div>
 
       <div class="calendar-grid">
@@ -33,7 +42,7 @@
               'holiday-day': isHoliday(day.fullDate),
               'drag-over': dragOverDate === day.fullDate
             }"
-            @click="day.date && showInlineInput(day.fullDate, $event)"
+            @click="day.date && (!isMobile || mobileViewMode === 'list') && showInlineInput(day.fullDate, $event)"
             @dragover.prevent="onDragOver(day.fullDate)"
             @dragleave="onDragLeave(day.fullDate)"
             @drop="onDrop(day.fullDate)"
@@ -52,18 +61,26 @@
                   <heart-filled style="color:#ff4d4f; margin-left:4px;" />
                 </span>
               </div>
-              <div v-if="isHoliday(day.fullDate)" class="holiday">
+              <div v-if="isHoliday(day.fullDate) && !isMobile" class="holiday">
                 <a-tag color="red" style="font-weight:bold;">
                   {{ getHoliday(day.fullDate) }}
                 </a-tag>
               </div>
+
+              <!-- Mobile todo indicator -->
+              <div v-if="isMobile && mobileViewMode === 'grid' && todosByDate(day.fullDate).length > 0" class="mobile-todo-indicator">
+                <span v-for="i in Math.min(todosByDate(day.fullDate).length, 3)" :key="i" class="todo-dot"></span>
+                <span v-if="todosByDate(day.fullDate).length > 3" class="todo-plus-more">+{{ todosByDate(day.fullDate).length - 3 }}</span>
+              </div>
+
+              <!-- Desktop or Mobile List View -->
               <a-list
+                v-if="(!isMobile || (isMobile && mobileViewMode === 'list')) && todosByDate(day.fullDate).length"
                 size="small"
                 :data-source="todosByDate(day.fullDate)"
                 class="todo-list"
                 bordered
                 :split="false"
-                v-if="todosByDate(day.fullDate).length"
                 style="background:transparent;"
               >
                 <template #renderItem="{ item: todo }">
@@ -100,8 +117,8 @@
                       <template v-if="editingTodoId !== todo.id">
                         <span 
                           :class="['todo-title-ellipsis', { 'completed-todo': todo.completed }]"
-                          @click.stop="handleTodoClick(todo)"
-                          @dblclick.stop="handleTodoClick(todo)"
+                          @click.stop="(!isMobile || mobileViewMode === 'list') && handleTodoClick(todo)"
+                          @dblclick.stop="(!isMobile || mobileViewMode === 'list') && handleTodoClick(todo)"
                           style="cursor:pointer"
                         >
                           {{ todo.title }}
@@ -158,7 +175,7 @@
                 </template>
               </a-list>
               <!-- Inline input for adding todo, only show if editingDate matches -->
-              <div v-if="editingDate === day.fullDate" class="add-todo-input">
+              <div v-if="(!isMobile || mobileViewMode === 'list') && editingDate === day.fullDate" class="add-todo-input">
                 <a-input
                   v-model:value="inlineTodoInputs[day.fullDate]"
                   placeholder="Add todo"
@@ -243,7 +260,9 @@ import {
   CrownOutlined,
   ThunderboltOutlined,
   RocketOutlined,
-  HeartFilled
+  HeartFilled,
+  AppstoreOutlined,
+  UnorderedListOutlined
 } from '@ant-design/icons-vue';
 import { 
   Card as ACard, 
@@ -362,21 +381,34 @@ async function fetchTodos() {
   }
 }
 
-function todosByDate(date) {
-  if (!date) return [];
-  return todos.value
-    .filter(todo => todo.date === date)
-    .sort((a, b) => {
-      // If both have time, compare time
+const todosByDateMap = computed(() => {
+  const map = new Map();
+  if (!todos.value || !Array.isArray(todos.value)) return map;
+
+  todos.value.forEach(todo => {
+    if (!map.has(todo.date)) {
+      map.set(todo.date, []);
+    }
+    map.get(todo.date).push(todo);
+  });
+
+  map.forEach(dayTodos => {
+    dayTodos.sort((a, b) => {
       if (a.time && b.time) {
         return a.time.localeCompare(b.time);
       }
-      // If only one has time, that one comes after
       if (a.time && !b.time) return 1;
       if (!a.time && b.time) return -1;
-      // If neither has time, sort by id as fallback
       return a.id - b.id;
     });
+  });
+
+  return map;
+});
+
+function todosByDate(date) {
+  if (!date) return [];
+  return todosByDateMap.value.get(date) || [];
 }
 
 function isHoliday(date) {
@@ -578,13 +610,24 @@ function handlePopconfirmKeydown(e) {
   }
 }
 
+const isMobile = ref(window.innerWidth <= 500);
+const mobileViewMode = ref('grid'); // 'grid' or 'list'
+
+function toggleMobileView() {
+  mobileViewMode.value = mobileViewMode.value === 'grid' ? 'list' : 'grid';
+}
+
+// ... (rest of the script setup)
+
 onMounted(() => {
+  window.addEventListener('resize', () => { isMobile.value = window.innerWidth <= 500; });
   fetchTodos();
   window.addEventListener('keydown', handleKeydown);
   window.addEventListener('keydown', handlePopconfirmKeydown);
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', () => { isMobile.value = window.innerWidth <= 500; });
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('keydown', handlePopconfirmKeydown);
 });
@@ -855,8 +898,6 @@ function getDayAbbr(fullDate) {
   const d = new Date(fullDate);
   return weekDays[d.getDay()];
 }
-
-onMounted(fetchTodos);
 </script>
 
 <style scoped>
@@ -1191,51 +1232,117 @@ onMounted(fetchTodos);
 /* Mobile: stack days vertically, 1 or 2 columns */
 @media (max-width: 500px) {
   .todo-calendar {
-    padding: 4px;
-    border-radius: 6px;
+    padding: 2px;
   }
   .calendar-header {
-    margin-bottom: 6px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .view-toggle-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
   }
   .month-title {
     margin: 0 4px !important;
-    font-size: 20px !important;
+    font-size: 18px !important;
   }
-  .calendar-weekdays {
-    display: none; /* Hide weekday headers for mobile */
+
+  /* --- GRID VIEW STYLES --- */
+  .mobile-grid-view .weekday-header {
+    padding: 4px 0;
+    font-size: 13px;
+    text-align: center;
   }
-  .calendar-days {
+  .mobile-grid-view .calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background-color: #f0f0f0;
+    border: 1px solid #f0f0f0;
+  }
+  .mobile-grid-view .calendar-day {
+    min-height: 80px;
+    padding: 4px 2px;
+    background-color: #fff;
+    font-size: 14px;
+    border: none;
+    border-radius: 0;
+  }
+  .mobile-grid-view .empty-day {
+    background-color: #fafafa;
+  }
+  .mobile-grid-view .date-header {
+    justify-content: center !important;
+  }
+  .mobile-grid-view .date-number {
+    font-size: 14px;
+  }
+  .mobile-grid-view .day-abbr {
+    display: none;
+  }
+  .mobile-grid-view .holiday {
+    display: none;
+  }
+  .mobile-grid-view .add-todo-input {
+    display: none;
+  }
+  .mobile-grid-view .mobile-todo-indicator {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    padding-top: 4px;
+    gap: 3px;
+  }
+  .mobile-grid-view .todo-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #1677ff;
+    border-radius: 50%;
+  }
+  .mobile-grid-view .todo-plus-more {
+    font-size: 12px;
+    color: #8c8c8c;
+  }
+
+  /* --- LIST VIEW STYLES (Original Mobile View) --- */
+  .mobile-list-view .calendar-weekdays {
+    display: none;
+  }
+  .mobile-list-view .calendar-days {
     display: grid;
     grid-template-columns: 1fr;
     gap: 12px;
-    overflow-x: visible;
   }
-  .empty-day {
+  .mobile-list-view .empty-day {
     display: none !important;
   }
-  .calendar-day {
+  .mobile-list-view .calendar-day {
     min-height: 100px;
     padding: 12px 8px;
     border-radius: 12px;
     font-size: 16px;
   }
-  .date-header,
-  .date-number {
+  .mobile-list-view .date-header,
+  .mobile-list-view .date-number {
     font-size: 20px;
   }
-  .holiday {
+  .mobile-list-view .holiday {
     font-size: 15px;
   }
-  .fancy-todo-item {
+  .mobile-list-view .fancy-todo-item {
     padding: 6px 6px !important;
-    /* font-size: 16px; */
     margin-bottom: 6px;
     border-radius: 8px !important;
   }
-  .add-todo-input {
+  .mobile-list-view .add-todo-input {
     margin-top: 6px;
   }
-  .todo-list-item .ant-input {
+  .mobile-list-view .todo-list-item .ant-input {
     font-size: 16px;
     height: 32px;
     padding: 4px 8px;
