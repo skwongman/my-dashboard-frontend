@@ -227,8 +227,8 @@ const defaultMenuItems = [
   { key: 'jpnews', label: 'JP News' },
   { key: 'diary', label: 'Diary' },
   { key: 'asset', label: 'Asset' },
-  { key: 'mtr', label: 'MTR' },
-  { key: 'transportation', label: 'Transportation' },
+  { key: 'mtr', label: 'Map' },
+  { key: 'transportation', label: 'MTR' },
   { key: 'weight', label: 'Weight' },
   { key: 'kmb', label: 'KMB' },
 ];
