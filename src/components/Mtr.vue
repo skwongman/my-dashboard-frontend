@@ -1,12 +1,11 @@
 <template>
   <div>
     <a-spin :spinning="loading">
-      <embed
-        :src="pdfUrl"
-        type="application/pdf"
+      <iframe
+        :src="`https://docs.google.com/gview?url=${pdfUrl}&embedded=true`"
         width="100%"
         height="800px"
-      />
+      ></iframe>
     </a-spin>
   </div>
 </template>
