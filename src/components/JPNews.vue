@@ -120,7 +120,7 @@ const fetchNews = async (reset = false) => {
     // Delay 1s before fetching
     await new Promise(resolve => setTimeout(resolve, 500))
     const res = await fetch(
-      `https://newsapi.jprogrammer.online/api/news/jp?page=${page.value}`
+      `https://jpnewsapi.tomoweb9.online/api/news/jp?page=${page.value}`
     )
     const data = await res.json()
     if (reset) {
