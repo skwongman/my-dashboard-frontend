@@ -88,12 +88,30 @@
       v-if="isModalVisible"
       v-model:open="isModalVisible"
       :key="selectedNews ? selectedNews.link : ''"
-      title="新聞詳情"
+      :wrapClassName="isFullScreen ? 'fullscreen-modal' : ''"
       @ok="isModalVisible = false"
-      :width="1600"
+      :width="isFullScreen ? '100vw' : 800"
       centered
       :bodyStyle="{ 'max-height': '80vh', 'overflow-y': 'auto' }"
+      :closable="false"
     >
+      <template #title>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span>新聞詳情</span>
+          <div class="custom-modal-controls">
+            <a-button type="text" @click="toggleFullScreen">
+              <template #icon>
+                <component :is="isFullScreen ? FullscreenExitOutlined : FullscreenOutlined" />
+              </template>
+            </a-button>
+            <a-button type="text" @click="isModalVisible = false">
+              <template #icon>
+                <CloseOutlined />
+              </template>
+            </a-button>
+          </div>
+        </div>
+      </template>
       <div v-if="selectedNews">
         <img :src="getValidImage(selectedNews, 0)" alt="thumbnail" class="w-full h-auto object-cover rounded-lg mb-4" />
         <h2 class="text-2xl font-semibold mb-2">{{ selectedNews.title }}</h2>
@@ -121,7 +139,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from "vue"
-import { ReloadOutlined } from "@ant-design/icons-vue"
+import { ReloadOutlined, FullscreenOutlined, FullscreenExitOutlined, CloseOutlined } from "@ant-design/icons-vue"
 
 const news = ref([])
 const loading = ref(false)
@@ -133,8 +151,14 @@ const noMore = ref(false)
 const showBackToTop = ref(false)
 const isModalVisible = ref(false);
 const selectedNews = ref(null);
+const isFullScreen = ref(false);
+
+const toggleFullScreen = () => {
+  isFullScreen.value = !isFullScreen.value;
+};
 
 const openNewsModal = (newsItem) => {
+  isFullScreen.value = false;
   selectedNews.value = newsItem;
   isModalVisible.value = true;
 };
@@ -489,11 +513,48 @@ const scrollToTop = () => {
     background-color: #e0e0e0;
   }
 }
+
+:deep(.fullscreen-modal .ant-modal) {
+  max-width: 100vw;
+  width: 100vw;
+  top: 0;
+  padding-bottom: 0;
+  margin: 0;
+}
+:deep(.fullscreen-modal .ant-modal-content) {
+  height: 100vh;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+}
+:deep(.fullscreen-modal .ant-modal-body) {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.custom-modal-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Add some space between buttons */
+}
+
+.custom-modal-controls .ant-btn {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-modal-controls .ant-btn:hover {
+  color: rgba(0, 0, 0, 0.75);
+  background-color: #f0f0f0;
+}
 </style>
 
 <style>
 .news-modal-content * {
-  font-size: 1.2rem !important;
+  font-size: 1.1rem !important;
   line-height: 1.7 !important;
 }
 </style>

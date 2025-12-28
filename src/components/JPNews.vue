@@ -158,6 +158,7 @@ const toggleFullScreen = () => {
 };
 
 const openNewsModal = (newsItem) => {
+  isFullScreen.value = false;
   selectedNews.value = newsItem;
   isModalVisible.value = true;
 };
