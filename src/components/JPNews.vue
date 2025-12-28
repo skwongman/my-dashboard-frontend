@@ -4,6 +4,18 @@
       <template #extra>
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-2">
+            <a-select
+              v-if="isTranslateEnabled"
+              v-model:value="translationApi"
+              size="small"
+              style="width: 100px"
+              class="translation-api-select"
+            >
+              <a-select-option value="google">Google</a-select-option>
+              <a-select-option value="mymemory">MyMemory</a-select-option>
+              <a-select-option value="gemini">Gemini</a-select-option>
+            </a-select>
+            <a-button v-if="isTranslateEnabled && translationApi === 'gemini'" type="text" @click="openApiKeyModal" class="!p-0 text-white"><SettingOutlined /></a-button>
             <span class="text-white">繁體中文</span>
             <a-switch v-model:checked="isTranslateEnabled" />
           </div>
@@ -114,6 +126,17 @@
           <span>ニュース詳細</span>
           <div class="custom-modal-controls">
             <div class="flex items-center gap-2">
+              <a-select
+                v-if="isModalTranslateEnabled"
+                v-model:value="translationApi"
+                size="small"
+                style="width: 100px;"
+              >
+                <a-select-option value="google">Google</a-select-option>
+                <a-select-option value="mymemory">MyMemory</a-select-option>
+                <a-select-option value="gemini">Gemini</a-select-option>
+              </a-select>
+              <a-button v-if="isModalTranslateEnabled && translationApi === 'gemini'" type="text" @click="openApiKeyModal"><SettingOutlined /></a-button>
               <span class="text-sm text-gray-500">繁體中文</span>
               <a-switch v-model:checked="isModalTranslateEnabled" :loading="isModalTranslating" />
             </div>
@@ -140,6 +163,37 @@
       </div>
     </a-modal>
 
+    <a-modal
+        v-model:open="isApiKeyModalVisible"
+        title="Google Gemini API Key & Model"
+        @ok="saveApiKey"
+        :z-index="1050"
+      >
+        <p>
+          Please enter up to 5 Google Gemini API keys.
+          If one key fails (e.g., quota exceeded), the next will be used automatically. Keys are stored in your browser's local storage.
+        </p>
+        <div v-for="(key, index) in geminiApiKeys" :key="index" style="margin-bottom: 10px;">
+          <a-input v-model:value="geminiApiKeys[index]" :placeholder="'API Key ' + (index + 1) + (index === 0 ? ' (Primary)' : '')" />
+        </div>
+        <a-button @click="fetchModels" :loading="isLoadingModels" style="margin-top: 10px;">Fetch Available Models</a-button>
+        <p v-if="availableModels.length > 0" style="margin-top: 10px;">Select a model:</p>
+        <a-select
+          v-if="availableModels.length > 0"
+          v-model:value="selectedModel"
+          style="width: 100%"
+        >
+          <a-select-option v-for="model in availableModels" :key="model.name" :value="model.name">{{ model.displayName }}</a-select-option>
+        </a-select>
+        <template #footer>
+            <a-button key="back" @click="isApiKeyModalVisible = false">Cancel</a-button>
+            <a-button key="submit" type="primary" :loading="loading" @click="saveApiKey">Save</a-button>
+        </template>
+        <div style="margin-top: 15px; color: #ff4d4f;">
+            <strong>Warning:</strong> Storing API keys in your browser's local storage is not secure. Please use an API key with restricted access for this client-side application.
+        </div>
+      </a-modal>
+
     <a-button
       v-show="showBackToTop"
       class="back-to-top-btn"
@@ -159,7 +213,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch } from "vue"
-import { ReloadOutlined, FullscreenOutlined, FullscreenExitOutlined, CloseOutlined } from "@ant-design/icons-vue"
+import { ReloadOutlined, FullscreenOutlined, FullscreenExitOutlined, CloseOutlined, SettingOutlined } from "@ant-design/icons-vue"
 import axios from "axios"
 
 const news = ref([])
@@ -178,22 +232,187 @@ const isTranslateEnabled = ref(false);
 const isTranslating = ref(false);
 const isModalTranslateEnabled = ref(false);
 const isModalTranslating = ref(false);
+const translationApi = ref('google'); // 'google' or 'mymemory'
+const isApiKeyModalVisible = ref(false);
+const geminiApiKeys = ref(['', '', '', '', '']);
+const currentApiKeyIndex = ref(0);
+const availableModels = ref([]);
+const selectedModel = ref('');
+const isLoadingModels = ref(false);
+
+const openApiKeyModal = () => {
+  // When opening the modal, if we have saved keys, populate the fields.
+  const savedKeys = localStorage.getItem('geminiApiKeys');
+  if (savedKeys) {
+    try {
+      const parsedKeys = JSON.parse(savedKeys);
+      if (Array.isArray(parsedKeys)) {
+        for (let i = 0; i < 5; i++) {
+          geminiApiKeys.value[i] = parsedKeys[i] || '';
+        }
+      }
+    } catch(e) {
+      console.error("Failed to parse Gemini API keys from localStorage", e);
+    }
+  }
+  isApiKeyModalVisible.value = true;
+};
+
+const saveApiKey = () => {
+  localStorage.setItem('geminiApiKeys', JSON.stringify(geminiApiKeys.value));
+  if (selectedModel.value) {
+    localStorage.setItem('geminiModel', selectedModel.value);
+  }
+  isApiKeyModalVisible.value = false;
+  // Reset to start with the first valid key next time.
+  const firstValidIndex = geminiApiKeys.value.findIndex(k => k && k.trim() !== '');
+  currentApiKeyIndex.value = firstValidIndex > -1 ? firstValidIndex : 0;
+  localStorage.setItem('geminiCurrentApiKeyIndex', currentApiKeyIndex.value.toString());
+};
+
+const fetchModels = async () => {
+  const keys = geminiApiKeys.value.filter(k => k && k.trim());
+  if (keys.length === 0) {
+    alert('Please enter at least one API key first.');
+    return;
+  }
+
+  isLoadingModels.value = true;
+  availableModels.value = []; // Clear previous models
+  let success = false;
+  
+  // Try keys in order
+  for (const key of keys) {
+    try {
+      const res = await axios.get(`https://generativelanguage.googleapis.com/v1/models?key=${key}`);
+      const fetchedModels = res.data.models.filter(model =>
+        model.supportedGenerationMethods.includes('generateContent')
+      );
+      
+      if (fetchedModels.length > 0) {
+        availableModels.value = fetchedModels;
+        // Found a working key. Set it as the current one for future translations.
+        const keyIndex = geminiApiKeys.value.indexOf(key);
+        currentApiKeyIndex.value = keyIndex;
+        localStorage.setItem('geminiCurrentApiKeyIndex', keyIndex.toString());
+        
+        success = true;
+        break; // Exit loop on first success
+      }
+    } catch (error) {
+      console.error(`Error fetching models with key ending in ...${key.slice(-4)}:`, error.response?.data?.error || error.message);
+    }
+  }
+
+  if (!success) {
+    alert('Failed to fetch models with any of the provided API keys. Please check your API keys and network connection.');
+  }
+  isLoadingModels.value = false;
+};
 
 const translateText = async (text, targetLang) => {
   if (!text) return '';
-  try {
-    const res = await axios.get('https://translate.googleapis.com/translate_a/single', {
-      params: {
-        client: 'gtx',
-        sl: 'ja',
-        tl: targetLang,
-        dt: 't',
-        q: text,
-      },
-    });
-    return res.data[0].map(item => item[0]).join('');
-  } catch (error) {
-    console.error('Translation error:', error);
+
+  if (translationApi.value === 'google') {
+    try {
+      const res = await axios.get('https://translate.googleapis.com/translate_a/single', {
+        params: {
+          client: 'gtx',
+          sl: 'ja',
+          tl: targetLang,
+          dt: 't',
+          q: text,
+        },
+      });
+      return res.data[0].map(item => item[0]).join('');
+    } catch (error) {
+      console.error('Google Translation error:', error);
+      return text; // Return original text on error
+    }
+  } else if (translationApi.value === 'mymemory') {
+    try {
+      const res = await axios.get('https://api.mymemory.translated.net/get', {
+        params: {
+          q: text,
+          langpair: `ja|${targetLang}`,
+        },
+      });
+      return res.data.responseData.translatedText;
+    } catch (error) {
+      console.error('MyMemory Translation error:', error);
+      return text; // Return original text on error
+    }
+  } else if (translationApi.value === 'gemini') {
+    const keys = geminiApiKeys.value;
+    const validKeys = keys.filter(k => k && k.trim() !== '');
+
+    if (validKeys.length === 0) {
+      console.error('Gemini API key is missing.');
+      openApiKeyModal();
+      return text;
+    }
+    if (!selectedModel.value) {
+        console.error('Gemini model is not selected.');
+        openApiKeyModal();
+        return text;
+    }
+
+    // Create an ordered list of keys to try, starting with the current one.
+    const orderedKeysToTry = [];
+    const startingIndex = currentApiKeyIndex.value;
+    
+    // Add keys from starting index to the end
+    for (let i = startingIndex; i < keys.length; i++) {
+        if (keys[i] && keys[i].trim() !== '') {
+            orderedKeysToTry.push(keys[i]);
+        }
+    }
+    // Add keys from the beginning up to the starting index
+    for (let i = 0; i < startingIndex; i++) {
+        if (keys[i] && keys[i].trim() !== '') {
+            orderedKeysToTry.push(keys[i]);
+        }
+    }
+
+    if (orderedKeysToTry.length === 0) {
+        // This case should be covered by validKeys.length check, but for safety
+        openApiKeyModal();
+        return text;
+    }
+
+    for (const apiKey of orderedKeysToTry) {
+        try {
+            const prompt = `Translate the following Japanese text to Traditional Chinese. Do not provide any explanation or other text, just the translation. The text to translate is: "${text}"`;
+            const modelName = selectedModel.value;
+            const res = await axios.post(`https://generativelanguage.googleapis.com/v1/${modelName}:generateContent?key=${apiKey}`, {
+              contents: [{
+                parts: [{ text: prompt }]
+              }],
+              generationConfig: {
+                temperature: 0.2,
+                maxOutputTokens: 2048,
+              }
+            });
+
+            const translation = res.data.candidates[0].content.parts[0].text;
+            
+            // Success. Update the primary index if it's different.
+            const successfulKeyIndex = keys.indexOf(apiKey);
+            if (successfulKeyIndex !== currentApiKeyIndex.value) {
+                currentApiKeyIndex.value = successfulKeyIndex;
+                localStorage.setItem('geminiCurrentApiKeyIndex', successfulKeyIndex.toString());
+            }
+
+            return translation;
+
+        } catch (error) {
+            console.error(`Gemini translation with key ending in ...${apiKey.slice(-4)} failed. Trying next one.`, error.response?.data?.error || error.message);
+        }
+    }
+
+    console.error('All Gemini API keys failed.');
+    // Maybe show one alert for the whole batch? Could add a flag.
+    // For now, no alert is better than many alerts.
     return text; // Return original text on error
   }
 };
@@ -212,6 +431,36 @@ const translateAllNews = async () => {
     isTranslating.value = false;
   }
 };
+
+watch(translationApi, async (newValue) => {
+  localStorage.setItem('jpNewsTranslationApi', newValue);
+
+  if (newValue === 'gemini' && geminiApiKeys.value.every(k => !k.trim())) {
+    openApiKeyModal();
+  }
+
+  // Clear existing translations
+  news.value.forEach(item => {
+    item.translatedTitle = '';
+    item.translatedContent = '';
+  });
+
+  // Retranslate if translation is enabled
+  if (isTranslateEnabled.value) {
+    translateAllNews();
+  }
+
+  // If the modal is visible and its translation is enabled, re-translate its content
+  if (isModalVisible.value && isModalTranslateEnabled.value && selectedNews.value) {
+    isModalTranslating.value = true;
+    try {
+      selectedNews.value.translatedTitle = await translateText(selectedNews.value.title, 'zh-TW');
+      selectedNews.value.translatedContent = await translateText(selectedNews.value.newsContent, 'zh-TW');
+    } finally {
+      isModalTranslating.value = false;
+    }
+  }
+});
 
 watch(isTranslateEnabled, (newValue) => {
   localStorage.setItem('jpNewsTranslateEnabled', newValue);
@@ -362,6 +611,25 @@ onMounted(() => {
   if (savedPreference !== null) {
     isTranslateEnabled.value = savedPreference === 'true';
   }
+  const savedApi = localStorage.getItem('jpNewsTranslationApi');
+  if (savedApi) {
+    translationApi.value = savedApi;
+  }
+  const savedKeys = localStorage.getItem('geminiApiKeys');
+  if (savedKeys) {
+    try {
+      const parsedKeys = JSON.parse(savedKeys);
+      if (Array.isArray(parsedKeys)) {
+        for (let i = 0; i < 5; i++) {
+          geminiApiKeys.value[i] = parsedKeys[i] || '';
+        }
+      }
+    } catch(e) {
+      console.error("Failed to parse Gemini API keys from localStorage", e);
+    }
+  }
+  currentApiKeyIndex.value = parseInt(localStorage.getItem('geminiCurrentApiKeyIndex') || '0', 10);
+  selectedModel.value = localStorage.getItem('geminiModel') || '';
 
   fetchNews(true)
   window.addEventListener("scroll", handleWindowScroll)
@@ -639,6 +907,17 @@ const scrollToTop = () => {
 .custom-modal-controls .ant-btn:hover {
   color: rgba(0, 0, 0, 0.75);
   background-color: #f0f0f0;
+}
+
+.translation-api-select :deep(.ant-select-selector) {
+  background-color: #1890ff !important;
+  color: white !important;
+  border-radius: 4px !important;
+  border: none !important;
+}
+
+.translation-api-select :deep(.ant-select-arrow) {
+  color: white !important;
 }
 </style>
 
