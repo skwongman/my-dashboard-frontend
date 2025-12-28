@@ -2,15 +2,21 @@
   <div>
     <a-card title="日本ニュース" class="mb-6 profile-card">
       <template #extra>
-        <a-button
-          type="text"
-          :loading="loading"
-          @click="refreshNews"
-          title="再読み込み"
-          class="!p-0 text-white"
-        >
-          <ReloadOutlined />
-        </a-button>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <span class="text-white">繁體中文</span>
+            <a-switch v-model:checked="isTranslateEnabled" />
+          </div>
+          <a-button
+            type="text"
+            :loading="loading"
+            @click="refreshNews"
+            title="再読み込み"
+            class="!p-0 text-white"
+          >
+            <ReloadOutlined />
+          </a-button>
+        </div>
       </template>
       <div ref="scrollContainer" class="news-scroll-container">
         <div
@@ -56,11 +62,19 @@
                 alt="thumbnail"
                 class="news-thumb"
               />
-              <div class="news-content">
-                <div class="news-headline">{{ item.title }}</div>
-                <div class="news-date">{{ item.pubDate }}</div>
-              </div>
-            </div>
+                              <div class="news-content">
+                                <div style="position: relative;">
+                                  <div class="news-headline">
+                                    {{ isTranslateEnabled ? item.translatedTitle || item.title : item.title }}
+                                  </div>
+                                  <a-spin
+                                    v-if="isTranslateEnabled && isTranslating && !item.translatedTitle"
+                                    size="small"
+                                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.7); display: flex; align-items: center; justify-content: center;"
+                                  />
+                                </div>
+                                <div class="news-date">{{ item.pubDate }}</div>
+                              </div>            </div>
             </div>
             <div
               v-if="loading && news.length > 0"
@@ -69,7 +83,7 @@
               >
               <div v-for="n in 12" :key="'loading-' + n" class="news-item skeleton">
                 <div class="news-thumb skeleton-thumb"></div>
-                <div class="news-content">
+                <div classs="news-content">
                 <div class="news-headline skeleton-line"></div>
                 <div class="news-date skeleton-line short"></div>
                 </div>
@@ -114,8 +128,8 @@
       </template>
       <div v-if="selectedNews">
         <img :src="getHighResImage(selectedNews)" alt="thumbnail" class="w-full h-auto object-cover rounded-lg mb-4" />
-        <h2 class="text-2xl font-semibold mb-2">{{ selectedNews.title }}</h2>
-        <div v-html="selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
+        <h2 class="text-2xl font-semibold mb-2">{{ isTranslateEnabled ? selectedNews.translatedTitle || selectedNews.title : selectedNews.title }}</h2>
+        <div v-html="isTranslateEnabled ? selectedNews.translatedContent || selectedNews.newsContent : selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
         <a :href="selectedNews.link" target="_blank" rel="noopener noreferrer">原文を読む</a>
       </div>
     </a-modal>
@@ -138,8 +152,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue"
+import { ref, onMounted, onBeforeUnmount, watch } from "vue"
 import { ReloadOutlined, FullscreenOutlined, FullscreenExitOutlined, CloseOutlined } from "@ant-design/icons-vue"
+import axios from "axios"
 
 const news = ref([])
 const loading = ref(false)
@@ -152,14 +167,73 @@ const showBackToTop = ref(false)
 const isModalVisible = ref(false);
 const selectedNews = ref(null);
 const isFullScreen = ref(false);
+const translate = ref('');
+const isTranslateEnabled = ref(false);
+const isTranslating = ref(false);
+
+const translateText = async (text, targetLang) => {
+  if (!text) return '';
+  try {
+    const res = await axios.get('https://translate.googleapis.com/translate_a/single', {
+      params: {
+        client: 'gtx',
+        sl: 'ja',
+        tl: targetLang,
+        dt: 't',
+        q: text,
+      },
+    });
+    return res.data[0].map(item => item[0]).join('');
+  } catch (error) {
+    console.error('Translation error:', error);
+    return text; // Return original text on error
+  }
+};
+
+const translateAllNews = async () => {
+  if (isTranslateEnabled.value) {
+    isTranslating.value = true;
+    for (const item of news.value) {
+      if (!item.translatedTitle) {
+        item.translatedTitle = await translateText(item.title, 'zh-TW');
+      }
+      if (!item.translatedContent) {
+        item.translatedContent = await translateText(item.newsContent, 'zh-TW');
+      }
+    }
+    isTranslating.value = false;
+  }
+};
+
+watch(isTranslateEnabled, (newValue) => {
+  localStorage.setItem('jpNewsTranslateEnabled', newValue);
+  if (newValue) {
+    translateAllNews();
+  }
+});
 
 const toggleFullScreen = () => {
   isFullScreen.value = !isFullScreen.value;
 };
 
-const openNewsModal = (newsItem) => {
+const openNewsModal = async (newsItem) => {
   isFullScreen.value = false;
   selectedNews.value = newsItem;
+
+  if (isTranslateEnabled.value && (!newsItem.translatedTitle || !newsItem.translatedContent)) {
+    isTranslating.value = true;
+    try {
+      if (!newsItem.translatedTitle) {
+        newsItem.translatedTitle = await translateText(newsItem.title, 'zh-TW');
+      }
+      if (!newsItem.translatedContent) {
+        newsItem.translatedContent = await translateText(newsItem.newsContent, 'zh-TW');
+      }
+    } finally {
+      isTranslating.value = false;
+    }
+  }
+  
   isModalVisible.value = true;
 };
 
@@ -213,6 +287,15 @@ const fetchNews = async (reset = false) => {
       newsContent: item.title, // Use title as content as per request
     }));
 
+    if (isTranslateEnabled.value) {
+      isTranslating.value = true;
+      for (const item of pageItems) {
+        item.translatedTitle = await translateText(item.title, 'zh-TW');
+        item.translatedContent = await translateText(item.newsContent, 'zh-TW');
+      }
+      isTranslating.value = false;
+    }
+
     if (reset) {
       news.value = pageItems
     } else {
@@ -245,6 +328,7 @@ const refreshNews = async () => {
   // Clear news immediately to trigger skeleton
   news.value = []
   updateTime.value = ""
+  translate.value = ''
   await fetchNews(true)
   window.scrollTo({ top: 0, behavior: "smooth" })
 }
@@ -262,6 +346,11 @@ const handleWindowScroll = () => {
 }
 
 onMounted(() => {
+  const savedPreference = localStorage.getItem('jpNewsTranslateEnabled');
+  if (savedPreference !== null) {
+    isTranslateEnabled.value = savedPreference === 'true';
+  }
+
   fetchNews(true)
   window.addEventListener("scroll", handleWindowScroll)
 })
@@ -542,8 +631,8 @@ const scrollToTop = () => {
 </style>
 
 <style>
-.news-modal-content * {
-  font-size: 1.2rem !important;
+.news-modal-content {
+  font-size: 1.1rem !important;
   line-height: 1.7 !important;
 }
 </style>
