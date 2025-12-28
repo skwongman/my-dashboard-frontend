@@ -113,6 +113,10 @@
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
           <span>ニュース詳細</span>
           <div class="custom-modal-controls">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-500">繁體中文</span>
+              <a-switch v-model:checked="isModalTranslateEnabled" :loading="isModalTranslating" />
+            </div>
             <a-button type="text" @click="toggleFullScreen">
               <template #icon>
                 <component :is="isFullScreen ? FullscreenExitOutlined : FullscreenOutlined" />
@@ -128,8 +132,10 @@
       </template>
       <div v-if="selectedNews">
         <img :src="getHighResImage(selectedNews)" alt="thumbnail" class="w-full h-auto object-cover rounded-lg mb-4" />
-        <h2 class="text-2xl font-semibold mb-2">{{ isTranslateEnabled ? selectedNews.translatedTitle || selectedNews.title : selectedNews.title }}</h2>
-        <div v-html="isTranslateEnabled ? selectedNews.translatedContent || selectedNews.newsContent : selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
+        <a-spin :spinning="isModalTranslating">
+          <h2 class="text-2xl font-semibold mb-2">{{ isModalTranslateEnabled ? selectedNews.translatedTitle || selectedNews.title : selectedNews.title }}</h2>
+          <div v-html="isModalTranslateEnabled ? selectedNews.translatedContent || selectedNews.newsContent : selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
+        </a-spin>
         <a :href="selectedNews.link" target="_blank" rel="noopener noreferrer">原文を読む</a>
       </div>
     </a-modal>
@@ -170,6 +176,8 @@ const isFullScreen = ref(false);
 const translate = ref('');
 const isTranslateEnabled = ref(false);
 const isTranslating = ref(false);
+const isModalTranslateEnabled = ref(false);
+const isModalTranslating = ref(false);
 
 const translateText = async (text, targetLang) => {
   if (!text) return '';
@@ -212,28 +220,32 @@ watch(isTranslateEnabled, (newValue) => {
   }
 });
 
+watch(isModalTranslateEnabled, async (newValue) => {
+  if (newValue && selectedNews.value) {
+    if (!selectedNews.value.translatedTitle || !selectedNews.value.translatedContent) {
+      isModalTranslating.value = true;
+      try {
+        if (!selectedNews.value.translatedTitle) {
+          selectedNews.value.translatedTitle = await translateText(selectedNews.value.title, 'zh-TW');
+        }
+        if (!selectedNews.value.translatedContent) {
+          selectedNews.value.translatedContent = await translateText(selectedNews.value.newsContent, 'zh-TW');
+        }
+      } finally {
+        isModalTranslating.value = false;
+      }
+    }
+  }
+});
+
 const toggleFullScreen = () => {
   isFullScreen.value = !isFullScreen.value;
 };
 
-const openNewsModal = async (newsItem) => {
+const openNewsModal = (newsItem) => {
   isFullScreen.value = false;
   selectedNews.value = newsItem;
-
-  if (isTranslateEnabled.value && (!newsItem.translatedTitle || !newsItem.translatedContent)) {
-    isTranslating.value = true;
-    try {
-      if (!newsItem.translatedTitle) {
-        newsItem.translatedTitle = await translateText(newsItem.title, 'zh-TW');
-      }
-      if (!newsItem.translatedContent) {
-        newsItem.translatedContent = await translateText(newsItem.newsContent, 'zh-TW');
-      }
-    } finally {
-      isTranslating.value = false;
-    }
-  }
-  
+  isModalTranslateEnabled.value = isTranslateEnabled.value;
   isModalVisible.value = true;
 };
 
