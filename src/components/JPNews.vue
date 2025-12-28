@@ -580,7 +580,7 @@ const fetchNews = async (reset = false) => {
       ...item,
       pubDate: item.createdDatetime,
       image: item.thumbUrl,
-      newsContent: item.title, // Use title as content as per request
+      newsContent: item.content,
     }));
 
     if (isTranslateEnabled.value) {
@@ -956,5 +956,6 @@ const scrollToTop = () => {
 .news-modal-content {
   font-size: 1.1rem !important;
   line-height: 1.7 !important;
+  white-space: pre-wrap;
 }
 </style>
