@@ -89,7 +89,7 @@
       v-model:open="isModalVisible"
       :key="selectedNews ? selectedNews.link : ''"
       :wrapClassName="isFullScreen ? 'fullscreen-modal' : ''"
-      @ok="isModalVisible = false"
+      :footer="null"
       :width="isFullScreen ? '100vw' : 800"
       centered
       :bodyStyle="{ 'max-height': '80vh', 'overflow-y': 'auto' }"
