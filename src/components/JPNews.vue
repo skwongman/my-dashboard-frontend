@@ -469,7 +469,6 @@ const translateAllNews = async () => {
 };
 
 watch(translationApi, async (newValue) => {
-  localStorage.setItem('jpNewsTranslationApi', newValue);
 
   if (newValue === 'gemini' && geminiApiKeys.value.every(k => !k.trim())) {
     openApiKeyModal();
@@ -646,10 +645,6 @@ onMounted(() => {
   const savedPreference = localStorage.getItem('jpNewsTranslateEnabled');
   if (savedPreference !== null) {
     isTranslateEnabled.value = savedPreference === 'true';
-  }
-  const savedApi = localStorage.getItem('jpNewsTranslationApi');
-  if (savedApi) {
-    translationApi.value = savedApi;
   }
   const savedKeys = localStorage.getItem('geminiApiKeys');
   if (savedKeys) {
