@@ -48,40 +48,77 @@
           </div>
         </div>
         <div v-else>
+          <div v-if="error" class="news-loading text-red-500">{{ error }}</div>
           <div class="news-grid">
-            <div v-for="item in news" :key="item.id" class="news-item">
-              <a
-                :href="item.link"
-                target="_blank"
-                rel="noopener"
-                class="news-link"
-              >
-                <img :src="item.thumbUrl" alt="thumbnail" class="news-thumb" />
-                <div class="news-content">
-                  <div class="news-headline">{{ item.title }}</div>
-                  <div class="news-date">{{ item.createdDatetime }}</div>
-                </div>
-              </a>
-            </div>
-          </div>
-          <div
-            v-if="loading && news.length > 0"
-            class="news-skeletons"
-            style="margin-top: 24px;"
-            >
-            <div v-for="n in 12" :key="'loading-' + n" class="news-item skeleton">
-              <div class="news-thumb skeleton-thumb"></div>
+            <div v-for="(item, idx) in news" :key="item.id" class="news-item" @click="openNewsModal(item)">
+              <img
+                :src="getValidImage(item, idx)"
+                alt="thumbnail"
+                class="news-thumb"
+              />
               <div class="news-content">
-              <div class="news-headline skeleton-line"></div>
-              <div class="news-date skeleton-line short"></div>
+                <div class="news-headline">{{ item.title }}</div>
+                <div class="news-date">{{ item.pubDate }}</div>
               </div>
             </div>
-          </div>
+            </div>
+            <div
+              v-if="loading && news.length > 0"
+              class="news-skeletons"
+              style="margin-top: 24px;"
+              >
+              <div v-for="n in 12" :key="'loading-' + n" class="news-item skeleton">
+                <div class="news-thumb skeleton-thumb"></div>
+                <div class="news-content">
+                <div class="news-headline skeleton-line"></div>
+                <div class="news-date skeleton-line short"></div>
+                </div>
+              </div>
+            </div>
           <div v-if="loading && news.length > 0" class="news-loading">さらに読み込み中...</div>
-          <div v-if="noMore" class="news-loading">すべて読み込みました</div>
+          <div v-if="noMore && !loading" class="news-loading">すべて読み込みました</div>
+          <div v-if="!loading && news.length === 0 && !error" class="news-loading">
+            ニュースがありません
+          </div>
         </div>
       </div>
     </a-card>
+
+    <a-modal
+      v-if="isModalVisible"
+      v-model:open="isModalVisible"
+      :key="selectedNews ? selectedNews.link : ''"
+      :wrapClassName="isFullScreen ? 'fullscreen-modal' : ''"
+      @ok="isModalVisible = false"
+      :width="isFullScreen ? '100vw' : 800"
+      centered
+      :bodyStyle="{ 'max-height': '80vh', 'overflow-y': 'auto' }"
+      :closable="false"
+    >
+      <template #title>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span>ニュース詳細</span>
+          <div class="custom-modal-controls">
+            <a-button type="text" @click="toggleFullScreen">
+              <template #icon>
+                <component :is="isFullScreen ? FullscreenExitOutlined : FullscreenOutlined" />
+              </template>
+            </a-button>
+            <a-button type="text" @click="isModalVisible = false">
+              <template #icon>
+                <CloseOutlined />
+              </template>
+            </a-button>
+          </div>
+        </div>
+      </template>
+      <div v-if="selectedNews">
+        <img :src="getHighResImage(selectedNews)" alt="thumbnail" class="w-full h-auto object-cover rounded-lg mb-4" />
+        <h2 class="text-2xl font-semibold mb-2">{{ selectedNews.title }}</h2>
+        <div v-html="selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
+        <a :href="selectedNews.link" target="_blank" rel="noopener noreferrer">原文を読む</a>
+      </div>
+    </a-modal>
 
     <a-button
       v-show="showBackToTop"
@@ -89,7 +126,7 @@
       type="primary"
       shape="circle"
       @click="scrollToTop"
-      title="回到頂部"
+      title="トップに戻る"
     >
       <template #icon>
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
@@ -102,7 +139,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from "vue"
-import { ReloadOutlined } from "@ant-design/icons-vue"
+import { ReloadOutlined, FullscreenOutlined, FullscreenExitOutlined, CloseOutlined } from "@ant-design/icons-vue"
 
 const news = ref([])
 const loading = ref(false)
@@ -112,21 +149,73 @@ const scrollContainer = ref(null)
 const page = ref(0)
 const noMore = ref(false)
 const showBackToTop = ref(false)
+const isModalVisible = ref(false);
+const selectedNews = ref(null);
+const isFullScreen = ref(false);
+
+const toggleFullScreen = () => {
+  isFullScreen.value = !isFullScreen.value;
+};
+
+const openNewsModal = (newsItem) => {
+  selectedNews.value = newsItem;
+  isModalVisible.value = true;
+};
+
+// 一組の有効なランダム画像（利用可能性を確保するために固定されたソース）
+const randomImages = [
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"
+]
+
+// 画像が有効であることを確認し、無効な場合はランダムな画像を使用します
+function getValidImage(item, idx) {
+  if (item.image && item.image.startsWith("http")) {
+    return item.image
+  }
+  return randomImages[idx % randomImages.length]
+}
+
+// モーダル用に高解像度の画像を取得します
+function getHighResImage(item) {
+  if (item.image && item.image.startsWith("http")) {
+    // Yahoo Japanの画像の場合、クエリパラメータを削除して高解像度版を取得します。
+    if (item.image.includes(".yimg.jp")) {
+      return item.image.split('?')[0];
+    }
+    return item.image;
+  }
+  // フォールバック画像を提供します
+  return randomImages[0];
+}
 
 const fetchNews = async (reset = false) => {
   if (loading.value || noMore.value) return
   loading.value = true
+  error.value = ""
   try {
     // Delay 1s before fetching
     await new Promise(resolve => setTimeout(resolve, 500))
     const res = await fetch(
       `https://jpnewsapi.tomoweb9.online/api/news/jp?page=${page.value}`
     )
+    if (!res.ok) throw new Error("日本のニュースを取得できませんでした")
     const data = await res.json()
+
+    const pageItems = data.data.map(item => ({
+      ...item,
+      pubDate: item.createdDatetime,
+      image: item.thumbUrl,
+      newsContent: item.title, // Use title as content as per request
+    }));
+
     if (reset) {
-      news.value = data.data
+      news.value = pageItems
     } else {
-      news.value = [...news.value, ...data.data]
+      news.value = [...news.value, ...pageItems]
     }
     if (!data.data || data.data.length === 0) {
       noMore.value = true
@@ -138,7 +227,8 @@ const fetchNews = async (reset = false) => {
       .getMinutes()
       .toString()
       .padStart(2, "0")}`
-  } catch (e) {
+  } catch (err) {
+    error.value = err.message || "ニュースの取得中にエラーが発生しました"
     if (reset) news.value = []
     noMore.value = true
     updateTime.value = ""
@@ -282,6 +372,7 @@ const scrollToTop = () => {
   flex-direction: column;
   height: 100%;
   width: 100%;
+  cursor: pointer;
 }
 
 .news-item:hover {
@@ -409,5 +500,49 @@ const scrollToTop = () => {
   100% {
     background-color: #e0e0e0;
   }
+}
+
+:deep(.fullscreen-modal .ant-modal) {
+  max-width: 100vw;
+  width: 100vw;
+  top: 0;
+  padding-bottom: 0;
+  margin: 0;
+}
+:deep(.fullscreen-modal .ant-modal-content) {
+  height: 100vh;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+}
+:deep(.fullscreen-modal .ant-modal-body) {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.custom-modal-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Add some space between buttons */
+}
+
+.custom-modal-controls .ant-btn {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-modal-controls .ant-btn:hover {
+  color: rgba(0, 0, 0, 0.75);
+  background-color: #f0f0f0;
+}
+</style>
+
+<style>
+.news-modal-content * {
+  font-size: 1.2rem !important;
+  line-height: 1.7 !important;
 }
 </style>
