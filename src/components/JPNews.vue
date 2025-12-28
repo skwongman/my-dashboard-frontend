@@ -12,10 +12,11 @@
               class="translation-api-select"
             >
               <a-select-option value="google">Google</a-select-option>
-              <a-select-option value="mymemory">MyMemory</a-select-option>
+              <a-select-option value="deepl">DeepL</a-select-option>
               <a-select-option value="gemini">Gemini</a-select-option>
             </a-select>
             <a-button v-if="isTranslateEnabled && translationApi === 'gemini'" type="text" @click="openApiKeyModal" class="!p-0 text-white"><SettingOutlined /></a-button>
+            <a-button v-if="isTranslateEnabled && translationApi === 'deepl'" type="text" @click="openDeeplApiKeyModal" class="!p-0 text-white"><SettingOutlined /></a-button>
             <span class="text-white">繁體中文</span>
             <a-switch v-model:checked="isTranslateEnabled" />
           </div>
@@ -133,10 +134,11 @@
                 style="width: 100px;"
               >
                 <a-select-option value="google">Google</a-select-option>
-                <a-select-option value="mymemory">MyMemory</a-select-option>
+                <a-select-option value="deepl">DeepL</a-select-option>
                 <a-select-option value="gemini">Gemini</a-select-option>
               </a-select>
               <a-button v-if="isModalTranslateEnabled && translationApi === 'gemini'" type="text" @click="openApiKeyModal"><SettingOutlined /></a-button>
+              <a-button v-if="isModalTranslateEnabled && translationApi === 'deepl'" type="text" @click="openDeeplApiKeyModal"><SettingOutlined /></a-button>
               <span class="text-sm text-gray-500">繁體中文</span>
               <a-switch v-model:checked="isModalTranslateEnabled" :loading="isModalTranslating" />
             </div>
@@ -194,6 +196,25 @@
         </div>
       </a-modal>
 
+    <a-modal
+        v-model:open="isDeeplApiKeyModalVisible"
+        title="DeepL API Key"
+        @ok="saveDeeplApiKey"
+        :z-index="1050"
+      >
+        <p>
+          Please enter your DeepL API key. The key is stored in your browser's local storage.
+        </p>
+        <a-input v-model:value="deeplApiKey" placeholder="DeepL API Key" />
+        <template #footer>
+            <a-button key="back" @click="isDeeplApiKeyModalVisible = false">Cancel</a-button>
+            <a-button key="submit" type="primary" :loading="loading" @click="saveDeeplApiKey">Save</a-button>
+        </template>
+        <div style="margin-top: 15px; color: #ff4d4f;">
+            <strong>Warning:</strong> Storing API keys in your browser's local storage is not secure. Please use an API key with restricted access for this client-side application.
+        </div>
+      </a-modal>
+
     <a-button
       v-show="showBackToTop"
       class="back-to-top-btn"
@@ -232,13 +253,28 @@ const isTranslateEnabled = ref(false);
 const isTranslating = ref(false);
 const isModalTranslateEnabled = ref(false);
 const isModalTranslating = ref(false);
-const translationApi = ref('google'); // 'google' or 'mymemory'
+const translationApi = ref('google'); // 'google' or 'deepl' or 'gemini'
 const isApiKeyModalVisible = ref(false);
 const geminiApiKeys = ref(['', '', '', '', '']);
 const currentApiKeyIndex = ref(0);
 const availableModels = ref([]);
 const selectedModel = ref('');
 const isLoadingModels = ref(false);
+const isDeeplApiKeyModalVisible = ref(false);
+const deeplApiKey = ref('');
+
+const openDeeplApiKeyModal = () => {
+  const savedKey = localStorage.getItem('deeplApiKey');
+  if (savedKey) {
+    deeplApiKey.value = savedKey;
+  }
+  isDeeplApiKeyModalVisible.value = true;
+};
+
+const saveDeeplApiKey = () => {
+  localStorage.setItem('deeplApiKey', deeplApiKey.value);
+  isDeeplApiKeyModalVisible.value = false;
+};
 
 const openApiKeyModal = () => {
   // When opening the modal, if we have saved keys, populate the fields.
