@@ -50,23 +50,16 @@
         <div v-else>
           <div v-if="error" class="news-loading text-red-500">{{ error }}</div>
           <div class="news-grid">
-            <div v-for="(item, idx) in news" :key="item.link + idx" class="news-item">
-              <a
-                :href="item.link"
-                target="_blank"
-                rel="noopener"
-                class="news-link"
-              >
-                <img
-                  :src="getValidImage(item, idx)"
-                  alt="thumbnail"
-                  class="news-thumb"
-                />
-                <div class="news-content">
-                  <div class="news-headline">{{ item.title }}</div>
-                  <div class="news-date">{{ item.pubDate }}</div>
-                </div>
-              </a>
+            <div v-for="(item, idx) in news" :key="item.link + idx" class="news-item" @click="openNewsModal(item)">
+              <img
+                :src="getValidImage(item, idx)"
+                alt="thumbnail"
+                class="news-thumb"
+              />
+              <div class="news-content">
+                <div class="news-headline">{{ item.title }}</div>
+                <div class="news-date">{{ item.pubDate }}</div>
+              </div>
             </div>
             </div>
             <div
@@ -90,6 +83,24 @@
         </div>
       </div>
     </a-card>
+
+    <a-modal
+      v-if="isModalVisible"
+      v-model:open="isModalVisible"
+      :key="selectedNews ? selectedNews.link : ''"
+      title="新聞詳情"
+      @ok="isModalVisible = false"
+      :width="1600"
+      centered
+      :bodyStyle="{ 'max-height': '80vh', 'overflow-y': 'auto' }"
+    >
+      <div v-if="selectedNews">
+        <img :src="getValidImage(selectedNews, 0)" alt="thumbnail" class="w-full h-auto object-cover rounded-lg mb-4" />
+        <h2 class="text-2xl font-semibold mb-2">{{ selectedNews.title }}</h2>
+        <div v-html="selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
+        <a :href="selectedNews.link" target="_blank" rel="noopener noreferrer">閱讀原文</a>
+      </div>
+    </a-modal>
 
     <a-button
       v-show="showBackToTop"
@@ -120,6 +131,13 @@ const scrollContainer = ref(null)
 const page = ref(0)
 const noMore = ref(false)
 const showBackToTop = ref(false)
+const isModalVisible = ref(false);
+const selectedNews = ref(null);
+
+const openNewsModal = (newsItem) => {
+  selectedNews.value = newsItem;
+  isModalVisible.value = true;
+};
 
 // 一組有效的隨機圖片（固定圖片來源，確保可用）
 const randomImages = [
@@ -167,6 +185,7 @@ const fetchNews = async (reset = false) => {
       link: `https://news.now.com/home/local/player?newsId=${item.newsId}`,
       pubDate: item.dateDiffString || "",
       image: item.imageUrl || "",
+      newsContent: item.newsContent ? item.newsContent.map(c => c.value).join('') : "",
       summary: item.summary
         ? item.summary.replace(/<\/?[^>]+(>|$)/g, "").trim()
         : ""
@@ -330,6 +349,7 @@ const scrollToTop = () => {
   flex-direction: column;
   height: 100%;
   width: 100%;
+  cursor: pointer;
 }
 
 .news-item:hover {
@@ -468,5 +488,12 @@ const scrollToTop = () => {
   100% {
     background-color: #e0e0e0;
   }
+}
+</style>
+
+<style>
+.news-modal-content * {
+  font-size: 1.2rem !important;
+  line-height: 1.7 !important;
 }
 </style>
