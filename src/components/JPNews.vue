@@ -78,10 +78,10 @@
                               <div class="news-content">
                                 <div style="position: relative;">
                                   <div class="news-headline">
-                                    {{ isTranslateEnabled ? item.translatedTitle || item.title : item.title }}
+                                    {{ (isTranslateEnabled && item.translations && item.translations[translationApi]) ? item.translations[translationApi].title : item.title }}
                                   </div>
                                   <a-spin
-                                    v-if="isTranslateEnabled && isTranslating && !item.translatedTitle"
+                                    v-if="isTranslateEnabled && isTranslating && (!item.translations || !item.translations[translationApi])"
                                     size="small"
                                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.7); display: flex; align-items: center; justify-content: center;"
                                   />
@@ -158,8 +158,8 @@
       <div v-if="selectedNews">
         <img :src="getHighResImage(selectedNews)" alt="thumbnail" class="w-full h-auto object-cover rounded-lg mb-4" />
         <a-spin :spinning="isModalTranslating">
-          <h2 class="text-2xl font-semibold mb-2">{{ isModalTranslateEnabled ? selectedNews.translatedTitle || selectedNews.title : selectedNews.title }}</h2>
-          <div v-html="isModalTranslateEnabled ? selectedNews.translatedContent || selectedNews.newsContent : selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
+          <h2 class="text-2xl font-semibold mb-2">{{ (isModalTranslateEnabled && selectedNews.translations && selectedNews.translations[translationApi]) ? selectedNews.translations[translationApi].title : selectedNews.title }}</h2>
+          <div v-html="(isModalTranslateEnabled && selectedNews.translations && selectedNews.translations[translationApi]) ? selectedNews.translations[translationApi].content : selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
         </a-spin>
         <a :href="selectedNews.link" target="_blank" rel="noopener noreferrer">原文を読む</a>
       </div>
@@ -456,12 +456,15 @@ const translateText = async (text, targetLang) => {
 const translateAllNews = async () => {
   if (isTranslateEnabled.value) {
     isTranslating.value = true;
+    const currentApi = translationApi.value;
     for (const item of news.value) {
-      if (!item.translatedTitle) {
-        item.translatedTitle = await translateText(item.title, 'zh-TW');
+      if (!item.translations) {
+        item.translations = {};
       }
-      if (!item.translatedContent) {
-        item.translatedContent = await translateText(item.newsContent, 'zh-TW');
+      if (!item.translations[currentApi]) {
+        const title = await translateText(item.title, 'zh-TW');
+        const content = await translateText(item.newsContent, 'zh-TW');
+        item.translations[currentApi] = { title, content };
       }
     }
     isTranslating.value = false;
@@ -474,12 +477,6 @@ watch(translationApi, async (newValue) => {
     openApiKeyModal();
   }
 
-  // Clear existing translations
-  news.value.forEach(item => {
-    item.translatedTitle = '';
-    item.translatedContent = '';
-  });
-
   // Retranslate if translation is enabled
   if (isTranslateEnabled.value) {
     translateAllNews();
@@ -487,12 +484,16 @@ watch(translationApi, async (newValue) => {
 
   // If the modal is visible and its translation is enabled, re-translate its content
   if (isModalVisible.value && isModalTranslateEnabled.value && selectedNews.value) {
-    isModalTranslating.value = true;
-    try {
-      selectedNews.value.translatedTitle = await translateText(selectedNews.value.title, 'zh-TW');
-      selectedNews.value.translatedContent = await translateText(selectedNews.value.newsContent, 'zh-TW');
-    } finally {
-      isModalTranslating.value = false;
+    const currentApi = newValue;
+    if (!selectedNews.value.translations[currentApi]) {
+        isModalTranslating.value = true;
+        try {
+            const title = await translateText(selectedNews.value.title, 'zh-TW');
+            const content = await translateText(selectedNews.value.newsContent, 'zh-TW');
+            selectedNews.value.translations[currentApi] = { title, content };
+        } finally {
+            isModalTranslating.value = false;
+        }
     }
   }
 });
@@ -506,15 +507,16 @@ watch(isTranslateEnabled, (newValue) => {
 
 watch(isModalTranslateEnabled, async (newValue) => {
   if (newValue && selectedNews.value) {
-    if (!selectedNews.value.translatedTitle || !selectedNews.value.translatedContent) {
+    const currentApi = translationApi.value;
+    if (!selectedNews.value.translations) {
+      selectedNews.value.translations = {};
+    }
+    if (!selectedNews.value.translations[currentApi]) {
       isModalTranslating.value = true;
       try {
-        if (!selectedNews.value.translatedTitle) {
-          selectedNews.value.translatedTitle = await translateText(selectedNews.value.title, 'zh-TW');
-        }
-        if (!selectedNews.value.translatedContent) {
-          selectedNews.value.translatedContent = await translateText(selectedNews.value.newsContent, 'zh-TW');
-        }
+        const title = await translateText(selectedNews.value.title, 'zh-TW');
+        const content = await translateText(selectedNews.value.newsContent, 'zh-TW');
+        selectedNews.value.translations[currentApi] = { title, content };
       } finally {
         isModalTranslating.value = false;
       }
@@ -529,6 +531,9 @@ const toggleFullScreen = () => {
 const openNewsModal = (newsItem) => {
   isFullScreen.value = false;
   selectedNews.value = newsItem;
+  if (!selectedNews.value.translations) {
+    selectedNews.value.translations = {};
+  }
   isModalTranslateEnabled.value = isTranslateEnabled.value;
   isModalVisible.value = true;
 };
@@ -585,9 +590,13 @@ const fetchNews = async (reset = false) => {
 
     if (isTranslateEnabled.value) {
       isTranslating.value = true;
+      const currentApi = translationApi.value;
       for (const item of pageItems) {
-        item.translatedTitle = await translateText(item.title, 'zh-TW');
-        item.translatedContent = await translateText(item.newsContent, 'zh-TW');
+        const title = await translateText(item.title, 'zh-TW');
+        const content = await translateText(item.newsContent, 'zh-TW');
+        item.translations = {
+          [currentApi]: { title, content }
+        };
       }
       isTranslating.value = false;
     }
