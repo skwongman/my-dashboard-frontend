@@ -96,7 +96,7 @@
               >
               <div v-for="n in 12" :key="'loading-' + n" class="news-item skeleton">
                 <div class="news-thumb skeleton-thumb"></div>
-                <div classs="news-content">
+                <div class="news-content">
                 <div class="news-headline skeleton-line"></div>
                 <div class="news-date skeleton-line short"></div>
                 </div>
