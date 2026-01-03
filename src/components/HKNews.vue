@@ -92,14 +92,14 @@
       :footer="null"
       :width="isFullScreen ? '100vw' : 800"
       centered
-      :bodyStyle="{ 'max-height': '80vh', 'overflow-y': 'auto' }"
+      :bodyStyle="modalBodyStyle"
       :closable="false"
     >
       <template #title>
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
           <span>新聞詳情</span>
           <div class="custom-modal-controls">
-            <a-button type="text" @click="toggleFullScreen">
+            <a-button v-if="!isMobile" type="text" @click="toggleFullScreen">
               <template #icon>
                 <component :is="isFullScreen ? FullscreenExitOutlined : FullscreenOutlined" />
               </template>
@@ -138,7 +138,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue"
+import { ref, onMounted, onBeforeUnmount, computed } from "vue"
 import { ReloadOutlined, FullscreenOutlined, FullscreenExitOutlined, CloseOutlined } from "@ant-design/icons-vue"
 
 const news = ref([])
@@ -152,6 +152,14 @@ const showBackToTop = ref(false)
 const isModalVisible = ref(false);
 const selectedNews = ref(null);
 const isFullScreen = ref(false);
+const isMobile = ref(false);
+
+const modalBodyStyle = computed(() => {
+  if (isMobile.value) {
+    return { 'max-height': '65vh', 'overflow-y': 'auto' };
+  }
+  return { 'max-height': '80vh', 'overflow-y': 'auto' };
+});
 
 const toggleFullScreen = () => {
   isFullScreen.value = !isFullScreen.value;
@@ -262,13 +270,20 @@ const handleWindowScroll = () => {
   }
 }
 
+const handleResize = () => {
+  isMobile.value = window.innerWidth <= 600;
+};
+
 onMounted(() => {
   fetchNews(true)
   window.addEventListener("scroll", handleWindowScroll)
+  window.addEventListener("resize", handleResize);
+  handleResize();
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener("scroll", handleWindowScroll)
+  window.removeEventListener("resize", handleResize);
 })
 
 const scrollToTop = () => {
