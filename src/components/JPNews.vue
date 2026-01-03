@@ -156,10 +156,12 @@
         </div>
       </template>
       <div v-if="selectedNews">
-        <img :src="getHighResImage(selectedNews)" alt="thumbnail" class="w-full max-w-full h-auto object-cover rounded-lg mb-4" />
-        <a-spin :spinning="isModalTranslating">
-          <h2 class="text-2xl font-semibold mb-2">{{ (isModalTranslateEnabled && selectedNews.translations && selectedNews.translations[translationApi]) ? selectedNews.translations[translationApi].title : selectedNews.title }}</h2>
-          <div v-html="(isModalTranslateEnabled && selectedNews.translations && selectedNews.translations[translationApi]) ? selectedNews.translations[translationApi].content : selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
+        <a-spin :spinning="isModalContentLoading" tip="記事を読み込み中...">
+          <img :src="getHighResImage(selectedNews)" alt="thumbnail" class="w-full max-w-full h-auto object-cover rounded-lg mb-4" />
+          <a-spin :spinning="isModalTranslating">
+            <h2 class="text-2xl font-semibold mb-2">{{ (isModalTranslateEnabled && selectedNews.translations && selectedNews.translations[translationApi]) ? selectedNews.translations[translationApi].title : selectedNews.title }}</h2>
+            <div v-html="(isModalTranslateEnabled && selectedNews.translations && selectedNews.translations[translationApi]) ? selectedNews.translations[translationApi].content : selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
+          </a-spin>
         </a-spin>
         <a :href="selectedNews.link" target="_blank" rel="noopener noreferrer">原文を読む</a>
       </div>
@@ -233,14 +235,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue"
+import { ref, onMounted, onBeforeUnmount, watch, computed, nextTick } from "vue"
 import { ReloadOutlined, FullscreenOutlined, FullscreenExitOutlined, CloseOutlined, SettingOutlined } from "@ant-design/icons-vue"
 import axios from "axios"
+import * as cheerio from "cheerio";
 
 const news = ref([])
 const loading = ref(false)
 const updateTime = ref("")
 const error = ref("")
+const PAGE_SIZE = 12;
 const scrollContainer = ref(null)
 const page = ref(0)
 const noMore = ref(false)
@@ -262,6 +266,8 @@ const selectedModel = ref('');
 const isLoadingModels = ref(false);
 const isDeeplApiKeyModalVisible = ref(false);
 const deeplApiKey = ref('');
+const isModalContentLoading = ref(false);
+const userToken = ref(null);
 
 const isMobile = ref(window.innerWidth <= 600);
 
@@ -526,14 +532,72 @@ const toggleFullScreen = () => {
   isFullScreen.value = !isFullScreen.value;
 };
 
-const openNewsModal = (newsItem) => {
+const openNewsModal = async (newsItem) => {
   isFullScreen.value = false;
   selectedNews.value = newsItem;
+  isModalVisible.value = true;
+
+  // If content is already fetched, do nothing.
+  if (newsItem.newsContent) {
+    if (!newsItem.translations) {
+      newsItem.translations = {};
+    }
+    isModalTranslateEnabled.value = isTranslateEnabled.value;
+    return;
+  }
+
+  isModalContentLoading.value = true;
+  try {
+    const url = new URL(newsItem.link);
+    const proxiedUrl = `/yahoo-news${url.pathname}`;
+    const { data: articlePageData } = await axios.get(proxiedUrl);
+    const $ = cheerio.load(articlePageData);
+    
+    const articleBody = $('.article_body');
+    const coverPhotoUrl = getHighResImage(newsItem).split('?')[0];
+
+    // Find links that contain both an image and a paragraph (likely an image with caption)
+    articleBody.find('a').each((i, el) => {
+        const link = $(el);
+        const image = link.find('img');
+        const paragraph = link.find('p');
+
+        if (image.length > 0 && paragraph.length > 0) {
+            // This is an image with a caption
+            
+            // Add a class to the caption paragraph for styling
+            paragraph.addClass('image-caption');
+
+            // Check if the image is a duplicate of the cover photo
+            let imageUrl = image.attr('src');
+            if (imageUrl && imageUrl.split('?')[0] === coverPhotoUrl) {
+                // If it's a duplicate, remove the entire container
+                link.parent().remove();
+            } else {
+                // Otherwise, just remove the hyperlink by replacing the link with its contents
+                link.replaceWith(link.contents());
+            }
+        }
+    });
+
+    const content = articleBody.html();
+    
+    const itemInNewsArray = news.value.find(item => item.id === newsItem.id);
+    if (itemInNewsArray) {
+      itemInNewsArray.newsContent = content || '記事の取得に失敗しました。';
+    }
+    selectedNews.value.newsContent = content || '記事の取得に失敗しました。';
+  } catch (err) {
+    console.error(`Error fetching article content from ${newsItem.link}:`, err);
+    selectedNews.value.newsContent = '記事の取得に失敗しました。';
+  } finally {
+    isModalContentLoading.value = false;
+  }
+
   if (!selectedNews.value.translations) {
     selectedNews.value.translations = {};
   }
   isModalTranslateEnabled.value = isTranslateEnabled.value;
-  isModalVisible.value = true;
 };
 
 // 一組の有効なランダム画像（利用可能性を確保するために固定されたソース）
@@ -566,87 +630,137 @@ function getHighResImage(item) {
   return randomImages[0];
 }
 
+const getToken = async () => {
+    if (userToken.value) {
+      return userToken.value;
+    }
+    const webUrl = '/yahoo-news/categories/entertainment';
+
+    try {
+      const { data } = await axios.get(webUrl);
+      const $ = cheerio.load(data);
+      const token = $('script')
+        .filter((i, el) => $(el).html().includes('userToken'))
+        .html()
+        .split('userToken')
+        .pop()
+        .slice(2)
+        .split(',')[0]
+        .replace(/"/g, '');
+      userToken.value = token;
+      return token;
+    } catch (err) {
+      console.error('Error fetching the page to get token: ', err);
+      throw new Error('トークンの取得に失敗しました');
+    }
+};
+
 const fetchNews = async (reset = false) => {
-  if (loading.value || noMore.value) return
-  loading.value = true
-  error.value = ""
-  try {
-    // Delay 1s before fetching
-    await new Promise(resolve => setTimeout(resolve, 500))
-    const res = await fetch(
-      `https://jpnewsapi.tomoweb9.online/api/news/jp?page=${page.value}`
-    )
-    if (!res.ok) throw new Error("日本のニュースを取得できませんでした")
-    const data = await res.json()
+  if (loading.value || (noMore.value && !reset)) return;
 
-    const pageItems = data.data.map(item => ({
-      ...item,
-      pubDate: item.createdDatetime,
-      image: item.thumbUrl,
-      newsContent: item.content,
-    }));
+  loading.value = true;
+  if (reset) {
+    page.value = 0;
+    news.value = [];
+    noMore.value = false;
+    error.value = '';
+    updateTime.value = '';
+    userToken.value = null;
+  }
 
-    if (isTranslateEnabled.value) {
-      isTranslating.value = true;
-      const currentApi = translationApi.value;
-      for (const item of pageItems) {
-        const title = await translateText(item.title, 'zh-TW');
-        const content = await translateText(item.newsContent, 'zh-TW');
-        item.translations = {
-          [currentApi]: { title, content }
-        };
+  const itemsToLoad = reset ? PAGE_SIZE : PAGE_SIZE;
+  const newlyFetchedItems = [];
+  let fetchedCount = 0;
+
+  while (fetchedCount < itemsToLoad && !noMore.value) {
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Token retrieval failed.");
+
+      const start = page.value * itemsToLoad + fetchedCount; // Careful with page logic
+      const apiUrl = `/yahoo-news/api/newsFeed/ent?start=${start}&results=${itemsToLoad - fetchedCount}&device=pc`;
+      
+      const [response] = await Promise.all([
+          axios.get(apiUrl, { headers: { 'userToken': token } }),
+          new Promise(resolve => setTimeout(resolve, 500))
+      ]);
+      
+      const responseItems = response.data.items.filter((news) => news.id !== null && news.link);
+
+      if (responseItems.length === 0) {
+        noMore.value = true;
+        break;
       }
-      isTranslating.value = false;
-    }
+      
+      const pageItems = responseItems.map(news => ({
+        id: news.contentId,
+        title: news.title,
+        link: news.link,
+        image: news.thumbUrl,
+        thumbUrl: news.thumbUrl,
+        pubDate: news.createTime ? `${news.createTime.date}, ${news.createTime.time}` : null,
+        newsContent: '',
+      }));
 
-    if (reset) {
-      news.value = pageItems
-    } else {
-      news.value = [...news.value, ...pageItems]
+      if (isTranslateEnabled.value) {
+        isTranslating.value = true;
+        for (const item of pageItems) {
+          const title = await translateText(item.title, 'zh-TW');
+          const content = await translateText(item.newsContent, 'zh-TW');
+          item.translations = { [translationApi.value]: { title, content } };
+        }
+        isTranslating.value = false;
+      }
+      
+      newlyFetchedItems.push(...pageItems);
+      fetchedCount += pageItems.length;
+
+      // This API seems to have pages based on item index, not page number
+      // To prevent re-fetching the same items, we don't increment a page number here.
+      // The `start` index calculation will handle getting the next batch.
+      
+    } catch (err) {
+      error.value = err.message || "ニュースの取得中にエラーが発生しました";
+      noMore.value = true;
+      break; 
     }
-    if (!data.data || data.data.length === 0) {
-      noMore.value = true
-    }
-    const now = new Date()
+  }
+
+  if (reset) {
+    news.value = newlyFetchedItems;
+  } else {
+    news.value = [...news.value, ...newlyFetchedItems];
+  }
+  
+  if(newlyFetchedItems.length > 0) {
+    const now = new Date();
     updateTime.value = `${now.getFullYear()}/${
       now.getMonth() + 1
     }/${now.getDate()} ${now.getHours()}:${now
       .getMinutes()
       .toString()
-      .padStart(2, "0")}`
-  } catch (err) {
-    error.value = err.message || "ニュースの取得中にエラーが発生しました"
-    if (reset) news.value = []
-    noMore.value = true
-    updateTime.value = ""
-  } finally {
-    loading.value = false
+      .padStart(2, "0")}`;
   }
-}
+  
+  page.value += 1; // Increment the logical UI page number
+  loading.value = false;
+};
 
 const refreshNews = async () => {
-  page.value = 0
-  noMore.value = false
-  error.value = ""
-  // Clear news immediately to trigger skeleton
-  news.value = []
-  updateTime.value = ""
-  translate.value = ''
-  await fetchNews(true)
-  window.scrollTo({ top: 0, behavior: "smooth" })
-}
+  await fetchNews(true);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
 
 const handleWindowScroll = () => {
-  if (loading.value || noMore.value) return
-  const scrollY = window.scrollY || window.pageYOffset
-  const viewportHeight = window.innerHeight
-  const fullHeight = document.documentElement.scrollHeight
-  showBackToTop.value = scrollY > 300
+  if (loading.value || noMore.value) return;
+  const scrollY = window.scrollY || window.pageYOffset;
+  const viewportHeight = window.innerHeight;
+  const fullHeight = document.documentElement.scrollHeight;
+  showBackToTop.value = scrollY > 300;
   if (scrollY + viewportHeight >= fullHeight - 100) {
-    page.value += 1
-    fetchNews()
+    fetchNews();
   }
-}
+};
 
 onMounted(() => {
   window.addEventListener('resize', handleResize);
@@ -670,9 +784,9 @@ onMounted(() => {
   currentApiKeyIndex.value = parseInt(localStorage.getItem('geminiCurrentApiKeyIndex') || '0', 10);
   selectedModel.value = localStorage.getItem('geminiModel') || '';
 
-  fetchNews(true)
-  window.addEventListener("scroll", handleWindowScroll)
-})
+  fetchNews(true);
+  window.addEventListener("scroll", handleWindowScroll);
+});
 
 onBeforeUnmount(() => {
   window.removeEventListener("scroll", handleWindowScroll)
@@ -966,5 +1080,20 @@ const scrollToTop = () => {
   font-size: 1.1rem !important;
   line-height: 1.7 !important;
   white-space: pre-wrap;
+}
+.news-modal-content img {
+  display: block;
+  margin: 1em auto;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.news-modal-content .image-caption {
+  text-align: center;
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 0.5em;
+  margin-bottom: 1.5em;
 }
 </style>
