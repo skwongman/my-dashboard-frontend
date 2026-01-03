@@ -17,7 +17,7 @@
             </a-select>
             <a-button v-if="isTranslateEnabled && translationApi === 'gemini'" type="text" @click="openApiKeyModal" class="!p-0 text-white"><SettingOutlined /></a-button>
             <a-button v-if="isTranslateEnabled && translationApi === 'deepl'" type="text" @click="openDeeplApiKeyModal" class="!p-0 text-white"><SettingOutlined /></a-button>
-            <span class="text-white">繁體中文</span>
+            <span class="text-white">{{ isMobile ? '中文' : '繁體中文' }}</span>
             <a-switch v-model:checked="isTranslateEnabled" />
           </div>
           <a-button
@@ -119,13 +119,13 @@
       :footer="null"
       :width="isFullScreen ? '100vw' : 800"
       centered
-      :bodyStyle="{ 'max-height': '80vh', 'overflow-y': 'auto' }"
+      :bodyStyle="modalBodyStyle"
       :closable="false"
     >
       <template #title>
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <span>ニュース詳細</span>
-          <div class="custom-modal-controls">
+        <div style="display: flex; align-items: center; width: 100%;">
+          <span class="hidden sm:inline">ニュース詳細</span>
+          <div class="custom-modal-controls ml-auto">
             <div class="flex items-center gap-2">
               <a-select
                 v-if="isModalTranslateEnabled"
@@ -139,10 +139,10 @@
               </a-select>
               <a-button v-if="isModalTranslateEnabled && translationApi === 'gemini'" type="text" @click="openApiKeyModal"><SettingOutlined /></a-button>
               <a-button v-if="isModalTranslateEnabled && translationApi === 'deepl'" type="text" @click="openDeeplApiKeyModal"><SettingOutlined /></a-button>
-              <span class="text-sm text-gray-500">繁體中文</span>
+              <span class="text-sm text-gray-500">{{ isMobile ? '中文' : '繁體中文' }}</span>
               <a-switch v-model:checked="isModalTranslateEnabled" :loading="isModalTranslating" />
             </div>
-            <a-button type="text" @click="toggleFullScreen">
+            <a-button v-if="!isMobile" type="text" @click="toggleFullScreen">
               <template #icon>
                 <component :is="isFullScreen ? FullscreenExitOutlined : FullscreenOutlined" />
               </template>
@@ -156,7 +156,7 @@
         </div>
       </template>
       <div v-if="selectedNews">
-        <img :src="getHighResImage(selectedNews)" alt="thumbnail" class="w-full h-auto object-cover rounded-lg mb-4" />
+        <img :src="getHighResImage(selectedNews)" alt="thumbnail" class="w-full max-w-full h-auto object-cover rounded-lg mb-4" />
         <a-spin :spinning="isModalTranslating">
           <h2 class="text-2xl font-semibold mb-2">{{ (isModalTranslateEnabled && selectedNews.translations && selectedNews.translations[translationApi]) ? selectedNews.translations[translationApi].title : selectedNews.title }}</h2>
           <div v-html="(isModalTranslateEnabled && selectedNews.translations && selectedNews.translations[translationApi]) ? selectedNews.translations[translationApi].content : selectedNews.newsContent" class="text-gray-600 mb-4 news-modal-content"></div>
@@ -233,7 +233,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from "vue"
+import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue"
 import { ReloadOutlined, FullscreenOutlined, FullscreenExitOutlined, CloseOutlined, SettingOutlined } from "@ant-design/icons-vue"
 import axios from "axios"
 
@@ -262,6 +262,17 @@ const selectedModel = ref('');
 const isLoadingModels = ref(false);
 const isDeeplApiKeyModalVisible = ref(false);
 const deeplApiKey = ref('');
+
+const isMobile = ref(window.innerWidth <= 600);
+
+const handleResize = () => {
+  isMobile.value = window.innerWidth <= 600;
+};
+
+const modalBodyStyle = computed(() => ({
+  'max-height': isMobile.value ? '60vh' : '80vh',
+  'overflow-y': 'auto',
+}));
 
 const openDeeplApiKeyModal = () => {
   const savedKey = localStorage.getItem('deeplApiKey');
@@ -346,39 +357,9 @@ const fetchModels = async () => {
   isLoadingModels.value = false;
 };
 
-const translateText = async (text, targetLang) => {
-  if (!text) return '';
+const geminiTranslate = async (text, targetLang) => {
+    if (!text || text.trim() === '') return '';
 
-  if (translationApi.value === 'google') {
-    try {
-      const res = await axios.get('https://translate.googleapis.com/translate_a/single', {
-        params: {
-          client: 'gtx',
-          sl: 'ja',
-          tl: targetLang,
-          dt: 't',
-          q: text,
-        },
-      });
-      return res.data[0].map(item => item[0]).join('');
-    } catch (error) {
-      console.error('Google Translation error:', error);
-      return text; // Return original text on error
-    }
-  } else if (translationApi.value === 'mymemory') {
-    try {
-      const res = await axios.get('https://api.mymemory.translated.net/get', {
-        params: {
-          q: text,
-          langpair: `ja|${targetLang}`,
-        },
-      });
-      return res.data.responseData.translatedText;
-    } catch (error) {
-      console.error('MyMemory Translation error:', error);
-      return text; // Return original text on error
-    }
-  } else if (translationApi.value === 'gemini') {
     const keys = geminiApiKeys.value;
     const validKeys = keys.filter(k => k && k.trim() !== '');
 
@@ -393,25 +374,16 @@ const translateText = async (text, targetLang) => {
         return text;
     }
 
-    // Create an ordered list of keys to try, starting with the current one.
     const orderedKeysToTry = [];
     const startingIndex = currentApiKeyIndex.value;
-    
-    // Add keys from starting index to the end
     for (let i = startingIndex; i < keys.length; i++) {
-        if (keys[i] && keys[i].trim() !== '') {
-            orderedKeysToTry.push(keys[i]);
-        }
+        if (keys[i] && keys[i].trim() !== '') orderedKeysToTry.push(keys[i]);
     }
-    // Add keys from the beginning up to the starting index
     for (let i = 0; i < startingIndex; i++) {
-        if (keys[i] && keys[i].trim() !== '') {
-            orderedKeysToTry.push(keys[i]);
-        }
+        if (keys[i] && keys[i].trim() !== '') orderedKeysToTry.push(keys[i]);
     }
 
     if (orderedKeysToTry.length === 0) {
-        // This case should be covered by validKeys.length check, but for safety
         openApiKeyModal();
         return text;
     }
@@ -421,36 +393,60 @@ const translateText = async (text, targetLang) => {
             const prompt = `Translate the following Japanese text to Traditional Chinese. Do not provide any explanation or other text, just the translation. The text to translate is: "${text}"`;
             const modelName = selectedModel.value;
             const res = await axios.post(`https://generativelanguage.googleapis.com/v1/${modelName}:generateContent?key=${apiKey}`, {
-              contents: [{
-                parts: [{ text: prompt }]
-              }],
-              generationConfig: {
-                temperature: 0.2,
-                maxOutputTokens: 2048,
-              }
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
             });
 
-            const translation = res.data.candidates[0].content.parts[0].text;
+            if (!res.data.candidates || res.data.candidates.length === 0) {
+              console.error('Gemini translation returned no candidates.');
+              continue; // Try next key
+            }
+
+            // Correctly join all parts of the response.
+            const translation = res.data.candidates[0].content.parts.map(p => p.text).join('');
             
-            // Success. Update the primary index if it's different.
             const successfulKeyIndex = keys.indexOf(apiKey);
             if (successfulKeyIndex !== currentApiKeyIndex.value) {
                 currentApiKeyIndex.value = successfulKeyIndex;
                 localStorage.setItem('geminiCurrentApiKeyIndex', successfulKeyIndex.toString());
             }
-
             return translation;
-
         } catch (error) {
             console.error(`Gemini translation with key ending in ...${apiKey.slice(-4)} failed. Trying next one.`, error.response?.data?.error || error.message);
         }
     }
 
     console.error('All Gemini API keys failed.');
-    // Maybe show one alert for the whole batch? Could add a flag.
-    // For now, no alert is better than many alerts.
-    return text; // Return original text on error
+    return text;
+};
+
+const translateText = async (text, targetLang) => {
+  if (!text) return '';
+
+  if (translationApi.value === 'google') {
+    try {
+      const res = await axios.get('https://translate.googleapis.com/translate_a/single', {
+        params: { client: 'gtx', sl: 'ja', tl: targetLang, dt: 't', q: text },
+      });
+      return res.data[0].map(item => item[0]).join('');
+    } catch (error) {
+      console.error('Google Translation error:', error);
+      return text;
+    }
+  } else if (translationApi.value === 'gemini') {
+    return await geminiTranslate(text, targetLang);
+  } else if (translationApi.value === 'mymemory') {
+    try {
+      const res = await axios.get('https://api.mymemory.translated.net/get', {
+        params: { q: text, langpair: `ja|${targetLang}`},
+      });
+      return res.data.responseData.translatedText;
+    } catch (error) {
+      console.error('MyMemory Translation error:', error);
+      return text;
+    }
   }
+  return text;
 };
 
 const translateAllNews = async () => {
@@ -472,17 +468,12 @@ const translateAllNews = async () => {
 };
 
 watch(translationApi, async (newValue) => {
-
   if (newValue === 'gemini' && geminiApiKeys.value.every(k => !k.trim())) {
     openApiKeyModal();
   }
-
-  // Retranslate if translation is enabled
   if (isTranslateEnabled.value) {
     translateAllNews();
   }
-
-  // If the modal is visible and its translation is enabled, re-translate its content
   if (isModalVisible.value && isModalTranslateEnabled.value && selectedNews.value) {
     const currentApi = newValue;
     if (!selectedNews.value.translations[currentApi]) {
@@ -521,6 +512,13 @@ watch(isModalTranslateEnabled, async (newValue) => {
         isModalTranslating.value = false;
       }
     }
+  }
+});
+
+watch(isModalVisible, (newValue) => {
+  if (!newValue) {
+    // Reset translation API to default when modal is closed
+    translationApi.value = 'google';
   }
 });
 
@@ -651,6 +649,7 @@ const handleWindowScroll = () => {
 }
 
 onMounted(() => {
+  window.addEventListener('resize', handleResize);
   const savedPreference = localStorage.getItem('jpNewsTranslateEnabled');
   if (savedPreference !== null) {
     isTranslateEnabled.value = savedPreference === 'true';
@@ -677,6 +676,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("scroll", handleWindowScroll)
+  window.removeEventListener('resize', handleResize)
 })
 
 const scrollToTop = () => {
