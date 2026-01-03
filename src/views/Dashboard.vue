@@ -35,6 +35,7 @@
             <RocketOutlined v-if="item.key === 'transportation'" />
             <LineChartOutlined v-if="item.key === 'weight'" />
             <ThunderboltOutlined v-if="item.key === 'kmb'" />
+            <PlaySquareOutlined v-if="item.key === 'tv-schedule'" />
           </template>
           <span>{{ item.label }}</span>
         </a-menu-item>
@@ -178,6 +179,7 @@
         <Transportation v-else-if="currentMenu === 'transportation'" />
         <Weight v-else-if="currentMenu === 'weight'" />
         <Kmb v-else-if="currentMenu === 'kmb'" />
+        <TvSchedule v-else-if="currentMenu === 'tv-schedule'" />
       </a-layout-content>
     </a-layout>
   </a-layout>
@@ -207,6 +209,7 @@ import {
   CarOutlined,
   LineChartOutlined,
   ThunderboltOutlined,
+  PlaySquareOutlined,
 } from "@ant-design/icons-vue";
 import Weather from "../components/Weather.vue";
 import JPNews from "../components/JPNews.vue";
@@ -218,6 +221,7 @@ import Mtr from "../components/Mtr.vue";
 import Transportation from "../components/Transportation.vue";
 import Weight from "../components/Weight.vue";
 import Kmb from "../components/Kmb.vue";
+import TvSchedule from "../components/TvSchedule.vue";
 
 const defaultMenuItems = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -231,6 +235,7 @@ const defaultMenuItems = [
   { key: 'transportation', label: 'MTR' },
   { key: 'weight', label: 'Weight' },
   { key: 'kmb', label: 'KMB' },
+  { key: 'tv-schedule', label: 'TV Schedule' },
 ];
 
 const menuItems = ref([]);
