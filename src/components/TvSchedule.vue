@@ -105,7 +105,7 @@
 
             <!-- Timeline Calendar View -->
             <div v-if="viewMode === 'timeline'" class="space-y-12">
-                 <section v-for="(day, dateKey) in groupedPrograms" :key="dateKey">
+                 <section v-for="(day, dateKey) in timelineDays" :key="dateKey">
                     <!-- Date Header -->
                     <div class="flex items-center gap-3 mb-4">
                         <div class="flex flex-col items-center bg-gray-200 rounded-lg px-3 py-1 border border-gray-300 min-w-[3.5rem]">
