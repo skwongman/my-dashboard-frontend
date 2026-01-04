@@ -79,7 +79,7 @@
                     >
                         <div v-for="program in dayPrograms" :key="program.id" class="flex-shrink-0 snap-start" :style="{ width: cardWidth + 'px' }">
                             <div
-                                class="group flex flex-col h-full bg-white border rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg"
+                                class="group flex flex-col h-full bg-white border rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg cursor-pointer"
                                 @click="openProgramUrl(program)"
                                 :class="isProgramOnAir(program) ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200 hover:border-gray-300'"
                                 >
@@ -248,6 +248,86 @@
             </div>
 
         </div>
+
+        <!-- Detail Modal -->
+        <a-modal 
+            v-model:visible="isModalVisible" 
+            :title="selectedProgramForModal?.seriesTitle"
+            :footer="null" 
+            width="800px"
+            @cancel="handleModalClose"
+        >
+            <div v-if="isModalLoading" class="flex justify-center items-center py-16">
+                <a-spin size="large" tip="詳細を読み込んでいます..." />
+            </div>
+            <div v-else-if="selectedProgramDetails">
+                <div class="relative w-full min-h-[200px] max-h-[300px] bg-gray-200 rounded-lg mb-4 flex items-center justify-center">
+                    <div v-if="isModalImageLoading" class="absolute inset-0 flex items-center justify-center z-10">
+                        <a-spin />
+                    </div>
+                    <img 
+                        :src="getModalImgSrc(selectedProgramForModal)" 
+                        :alt="selectedProgramForModal?.seriesTitle" 
+                        @load="isModalImageLoading = false"
+                        @error="onModalImgError"
+                        :class="['w-full h-auto max-h-[300px] object-cover rounded-lg transition-opacity duration-300', isModalImageLoading ? 'opacity-0' : 'opacity-100']" 
+                    />
+                </div>
+                
+                <h2 class="text-2xl font-bold mb-1">{{ selectedProgramForModal?.seriesTitle }}</h2>
+                <h3 class="text-lg text-gray-600 mb-4">{{ selectedProgramDetails.title }}</h3>
+
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span v-for="tag in selectedProgramDetails.tags" :key="tag.id" class="px-2 py-1 text-xs rounded border bg-gray-100 text-gray-700">
+                        {{ tag.name }}
+                    </span>
+                </div>
+
+                <p class="text-gray-800 whitespace-pre-wrap mb-6 bg-gray-50 p-4 rounded-md border max-h-[200px] overflow-y-auto">{{ selectedProgramDetails.description }}</p>
+                
+                <div v-if="isTalentsLoading" class="mt-8">
+                    <h4 class="text-base font-bold mb-4 text-gray-800 border-b pb-2">出演者</h4>
+                    <div class="flex overflow-x-auto gap-4 py-3 scrollbar-hide">
+                        <div v-for="i in 8" :key="i" class="text-center flex-shrink-0 w-24">
+                            <div class="w-20 h-20 rounded-full bg-gray-200 animate-pulse mx-auto mb-2 shadow-lg"></div>
+                            <div class="h-3 bg-gray-200 rounded animate-pulse w-16 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else-if="selectedProgramTalents.length > 0" class="mt-8">
+                    <h4 class="text-base font-bold mb-4 text-gray-800 border-b pb-2">出演者</h4>
+                    <div 
+                        class="flex overflow-x-auto gap-4 py-3 scrollbar-hide"
+                        :class="{ 'select-none': isTalentDragging }"
+                        :style="{ cursor: isTalentDown ? 'grabbing' : 'grab', scrollBehavior: isTalentDragging ? 'auto' : 'smooth' }"
+                        @mousedown="handleTalentMouseDown"
+                        @mouseleave="handleTalentMouseLeave"
+                        @mouseup="handleTalentMouseUp"
+                        @mousemove="handleTalentMouseMove"
+                    >
+                        <div v-for="talent in selectedProgramTalents" :key="talent.content.id" class="text-center flex-shrink-0 w-24">
+                            <img 
+                                :src="talent.content.existsThumbnail ? `https://image-cdn.tver.jp${talent.content.thumbnailPath}` : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" 
+                                :alt="talent.content.name" 
+                                draggable="false"
+                                class="w-20 h-20 rounded-full object-cover mx-auto mb-2 shadow-lg border-2 border-gray-100"
+                                @error="(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/512/149/149071.png' }"
+                            />
+                            <p class="text-xs text-gray-700 font-medium leading-tight line-clamp-2">{{ talent.content.name }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <a :href="selectedProgramDetails.share.url" target="_blank" rel="noopener,noreferrer" class="w-full block mt-8">
+                  <a-button type="primary" block size="large">
+                      TVerで視聴する
+                  </a-button>
+                </a>
+            </div>
+             <div v-else class="text-center py-16">
+                <a-alert message="詳細の読み込みに失敗しました。" type="error" />
+            </div>
+        </a-modal>
     </div>
 </template>
 
@@ -256,13 +336,22 @@ import { ref, onMounted, onBeforeUnmount, computed, reactive, watch } from 'vue'
 import axios from 'axios';
 import { transformRawData, getHKDate, formatTime, getMonth, getDay, getWeekday } from '../utils/tver.js';
 import { ReloadOutlined, PlayCircleOutlined, ClockCircleOutlined, DesktopOutlined, MobileOutlined, MonitorOutlined, TableOutlined, CalendarOutlined } from '@ant-design/icons-vue';
-import { message, Spin as ASpin, Alert as AAlert, Button as AButton, Slider as ASlider, Popover as APopover } from 'ant-design-vue';
+import { message, Spin as ASpin, Alert as AAlert, Button as AButton, Slider as ASlider, Popover as APopover, Modal as AModal } from 'ant-design-vue';
 
 const programs = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const filter = ref('ALL');
 const viewMode = ref('list'); // 'list' or 'timeline'
+
+// --- Modal State ---
+const isModalVisible = ref(false);
+const isModalLoading = ref(false);
+const isModalImageLoading = ref(false);
+const selectedProgramDetails = ref(null);
+const selectedProgramForModal = ref(null);
+const selectedProgramTalents = ref([]);
+const isTalentsLoading = ref(false);
 
 // --- List View Specific ---
 const cardWidth = ref(300);
@@ -282,15 +371,81 @@ const getChannelCode = (program) => {
     return null;
 }
 
+const fetchProgramTalents = async (programId) => {
+    try {
+        const memberSid = import.meta.env.VITE_TVER_MEMBER_SID;
+        const url = `https://member-api.tver.jp/service/api/v1/callLiveEpisodeTalent/${programId}?member_sid=${memberSid}&require_data=mylist`;
+        const headers = { 'x-tver-platform-type': 'web' };
+        const response = await axios.get(url, { headers });
+        if (response.data.result && response.data.result.contents) {
+            selectedProgramTalents.value = response.data.result.contents.filter(c => c.type === 'talent');
+        } else {
+            selectedProgramTalents.value = [];
+        }
+    } catch (err) {
+        console.error("Failed to fetch program talents:", err);
+        selectedProgramTalents.value = []; // Fail silently
+    }
+};
+
+const fetchProgramDetails = async (programId) => {
+    try {
+        const response = await axios.get(`https://statics.tver.jp/content/live/${programId}.json?v=2`);
+        selectedProgramDetails.value = response.data;
+    } catch (err) {
+        console.error("Failed to fetch program details:", err);
+        message.error("番組詳細の取得に失敗しました。");
+        selectedProgramDetails.value = null;
+    }
+};
+
+const handleModalClose = () => {
+    isModalVisible.value = false;
+    selectedProgramDetails.value = null;
+    selectedProgramForModal.value = null;
+    selectedProgramTalents.value = [];
+    isModalImageLoading.value = false;
+    isTalentsLoading.value = false;
+};
+
 const openProgramUrl = (program) => {
-    if (viewMode.value === 'list' && dragDistance.value > 10) { 
-      return; 
+    if (viewMode.value === 'list' && dragDistance.value > 10) {
+        return;
     }
-    const code = getChannelCode(program);
-    if (code) {
-        window.open(`https://tver.jp/live/${code}`, '_blank', 'noopener,noreferrer');
+
+    if (isProgramOnAir(program)) {
+        const code = getChannelCode(program);
+        if (code) {
+            window.open(`https://tver.jp/live/${code}`, '_blank', 'noopener,noreferrer');
+        }
+    } else {
+        if (program.id) {
+            selectedProgramForModal.value = program;
+            selectedProgramDetails.value = null;
+            selectedProgramTalents.value = [];
+            isModalLoading.value = true;
+            isModalImageLoading.value = true;
+            isTalentsLoading.value = true;
+            isModalVisible.value = true;
+            
+            const fetchAllModalData = async () => {
+                const detailsPromise = fetchProgramDetails(program.id);
+                const talentsPromise = fetchProgramTalents(program.id);
+
+                detailsPromise.finally(() => {
+                    isModalLoading.value = false;
+                });
+                
+                talentsPromise.finally(() => {
+                    isTalentsLoading.value = false;
+                });
+                
+                await Promise.all([detailsPromise, talentsPromise]);
+            };
+            fetchAllModalData();
+        }
     }
-}
+};
 
 const filterButtons = [
     { label: 'ALL', value: 'ALL', color: '#4f46e5' },
@@ -457,8 +612,33 @@ const getProgramStyle = (program, timelineStart) => {
 // --- Shared/List View Logic ---
 const IMAGE_BASE_URL_FALLBACK = "https://picsum.photos/800/450";
 const imageSources = reactive({});
-const getImgSrc = (program) => imageSources[program.id] || `https://image-cdn.tver.jp/w=600${program.thumbnailUrl}`;
-const handleImgError = (program) => { imageSources[program.id] = IMAGE_BASE_URL_FALLBACK; };
+const getImgSrc = (program) => {
+  if (!program) return IMAGE_BASE_URL_FALLBACK;
+  return imageSources[program.id] || `https://image-cdn.tver.jp/w=600${program.thumbnailUrl}`;
+}
+const handleImgError = (program) => { 
+  if(program) {
+    imageSources[program.id] = IMAGE_BASE_URL_FALLBACK; 
+  }
+};
+
+const getModalImgSrc = (program) => {
+  if (!program || !program.thumbnailUrl) return IMAGE_BASE_URL_FALLBACK;
+  const cacheKey = program.id + '_modal';
+  return imageSources[cacheKey] || `https://image-cdn.tver.jp${program.thumbnailUrl}`;
+};
+
+const onModalImgError = () => {
+    isModalImageLoading.value = false;
+    handleModalImgError(selectedProgramForModal.value);
+};
+
+const handleModalImgError = (program) => {
+  if (program) {
+    const cacheKey = program.id + '_modal';
+    imageSources[cacheKey] = IMAGE_BASE_URL_FALLBACK;
+  }
+};
 const isProgramOnAir = (program) => { const now = new Date(); return now >= program.startAt && now <= program.endAt; };
 const getDurationMin = (program) => Math.round((program.endAt.getTime() - program.startAt.getTime()) / 60000);
 
@@ -514,19 +694,24 @@ const handleMouseUp = () => { if (isDown.value) stopDragging(); };
 const stopDragging = () => {
     if (!isDown.value) return;
     isDown.value = false;
-    const applyMomentum = () => {
-        if (!activeSlider) { isDragging.value = false; return; };
-        velocity.value *= 0.97; 
-        activeSlider.scrollLeft -= velocity.value;
-        if (Math.abs(velocity.value) > 0.5) {
-            animationFrameId.value = requestAnimationFrame(applyMomentum);
-        } else {
-            isDragging.value = false;
-            cancelMomentum();
-        }
-    };
-    cancelMomentum();
-    animationFrameId.value = requestAnimationFrame(applyMomentum);
+
+    if (Math.abs(velocity.value) > 1) {
+        const applyMomentum = () => {
+            if (!activeSlider) { isDragging.value = false; return; };
+            velocity.value *= 0.97; 
+            activeSlider.scrollLeft -= velocity.value;
+            if (Math.abs(velocity.value) > 0.5) {
+                animationFrameId.value = requestAnimationFrame(applyMomentum);
+            } else {
+                isDragging.value = false;
+                cancelMomentum();
+            }
+        };
+        cancelMomentum();
+        animationFrameId.value = requestAnimationFrame(applyMomentum);
+    } else {
+        isDragging.value = false;
+    }
 };
 
 const handleMouseMove = (e) => {
@@ -549,7 +734,75 @@ const cancelMomentum = () => {
 
 onBeforeUnmount(() => {
     cancelMomentum();
+    cancelTalentMomentum();
 });
+
+// --- Drag-to-scroll Logic (For Talents List) ---
+const isTalentDragging = ref(false);
+const isTalentDown = ref(false);
+const talentStartX = ref(0);
+const talentScrollLeftStart = ref(0);
+const talentLastPageX = ref(0);
+const talentVelocity = ref(0);
+const talentAnimationFrameId = ref(null);
+let activeTalentSlider = null;
+
+const handleTalentMouseDown = (e) => {
+    if (e.button !== 0) return;
+    const slider = e.currentTarget;
+    if (!slider) return;
+    activeTalentSlider = slider;
+    isTalentDown.value = true;
+    isTalentDragging.value = true;
+    cancelTalentMomentum();
+    talentStartX.value = e.pageX - slider.offsetLeft;
+    talentScrollLeftStart.value = slider.scrollLeft;
+    talentLastPageX.value = e.pageX;
+    talentVelocity.value = 0;
+};
+
+const handleTalentMouseLeave = () => { if (isTalentDown.value) stopTalentDragging(); };
+const handleTalentMouseUp = () => { if (isTalentDown.value) stopTalentDragging(); };
+
+const stopTalentDragging = () => {
+    if (!isTalentDown.value) return;
+    isTalentDown.value = false;
+    
+    if (Math.abs(talentVelocity.value) > 1) {
+        const applyMomentum = () => {
+            if (!activeTalentSlider) { isTalentDragging.value = false; return; };
+            talentVelocity.value *= 0.97; 
+            activeTalentSlider.scrollLeft -= talentVelocity.value;
+            if (Math.abs(talentVelocity.value) > 0.5) {
+                talentAnimationFrameId.value = requestAnimationFrame(applyMomentum);
+            } else {
+                isTalentDragging.value = false;
+                cancelTalentMomentum();
+            }
+        };
+        cancelMomentum();
+        talentAnimationFrameId.value = requestAnimationFrame(applyMomentum);
+    } else {
+        isTalentDragging.value = false;
+    }
+};
+
+const handleTalentMouseMove = (e) => {
+    if (!isTalentDown.value || !activeTalentSlider) return;
+    e.preventDefault();
+    const x = e.pageX - activeTalentSlider.offsetLeft;
+    const walk = (x - talentStartX.value);
+    activeTalentSlider.scrollLeft = talentScrollLeftStart.value - walk;
+    talentVelocity.value = e.pageX - talentLastPageX.value;
+    talentLastPageX.value = e.pageX;
+};
+
+const cancelTalentMomentum = () => {
+    if (talentAnimationFrameId.value) {
+        cancelAnimationFrame(talentAnimationFrameId.value);
+        talentAnimationFrameId.value = null;
+    }
+};
 </script>
 
 <style scoped>
