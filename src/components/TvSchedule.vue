@@ -1,5 +1,17 @@
 <template>
     <div class="p-4 bg-gray-50 rounded-lg">
+        <!-- Measurement container -->
+        <div style="position: absolute; left: -9999px; visibility: hidden;">
+            <div
+                v-for="(program, index) in programsToMeasure"
+                :key="'measure-' + program.id"
+                :ref="el => { if (el) cardRefs[index] = el }"
+                :style="{ width: cardWidth + 'px' }"
+            >
+                <ProgramCard :program="program" @ready="onCardReady" />
+            </div>
+        </div>
+
         <!-- Header: Title, Filters, Reload Button -->
         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 pb-4 border-b border-gray-200">
             <h1 class="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">TV Schedule</h1>
@@ -38,7 +50,7 @@
         </div>
   
         <!-- Error Alert -->
-        <div v-if="error && !loading" class="text-center py-20">
+        <div v-if="error && !loading && !programsToMeasure.length" class="text-center py-20">
             <a-alert message="エラーが発生しました" :description="error" type="error" show-icon>
                 <template #action>
                     <a-button type="primary" @click="fetchData"><ReloadOutlined /> 再読み込み</a-button>
@@ -48,28 +60,28 @@
   
         <!-- Content Area -->
         <div v-if="!loading && !error">
-            <div v-if="filteredPrograms.length === 0" class="text-center py-32 text-slate-500">
+            <div v-if="filteredPrograms.length === 0 && !programsToMeasure.length" class="text-center py-32 text-slate-500">
                 <p>現在表示できる番組情報がありません。</p>
             </div>
             
             <!-- List View -->
             <div v-if="viewMode === 'list'" class="space-y-12">
-                <section v-for="(dayPrograms, dateKey) in groupedPrograms" :key="dateKey">
+                <section v-for="(day, dateKey) in groupedPrograms" :key="dateKey">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="flex flex-col items-center bg-gray-200 rounded-lg px-3 py-1 border border-gray-300 min-w-[3.5rem]">
-                            <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{{ getMonth(dayPrograms[0].startAt) }}月</span>
-                            <span class="text-xl font-bold text-gray-800 leading-none">{{ getDay(dayPrograms[0].startAt) }}</span>
+                            <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{{ getMonth(day.programs[0].startAt) }}月</span>
+                            <span class="text-xl font-bold text-gray-800 leading-none">{{ getDay(day.programs[0].startAt) }}</span>
                         </div>
                         <h2 class="text-lg md:text-xl font-bold text-gray-700">
-                            {{ getWeekday(dayPrograms[0].startAt) }}曜日
+                            {{ getWeekday(day.programs[0].startAt) }}曜日
                         </h2>
                         <span class="text-sm text-gray-500 font-mono ml-auto bg-gray-200 px-2 py-1 rounded-full border border-gray-300">
-                            {{ dayPrograms.length }}
+                            {{ day.programs.length }}
                         </span>
                     </div>
 
                     <div 
-                        class="flex overflow-x-auto gap-4 py-4 px-1 items-stretch scrollbar-hide snap-x snap-mandatory"
+                        class="flex overflow-x-auto gap-4 py-4 px-1 items-stretch scrollbar-hide"
                         :class="{ 'select-none': isDragging }"
                         :style="{ cursor: isDown ? 'grabbing' : 'grab', scrollBehavior: isDragging ? 'auto' : 'smooth' }"
                         @mousedown="handleMouseDown"
@@ -77,65 +89,15 @@
                         @mouseup="handleMouseUp"
                         @mousemove="handleMouseMove"
                     >
-                        <div v-for="program in dayPrograms" :key="program.id" class="flex-shrink-0 snap-start" :style="{ width: cardWidth + 'px' }">
-                            <div
-                                class="group flex flex-col h-full bg-white border rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg cursor-pointer"
-                                @click="openProgramUrl(program)"
-                                :class="isProgramOnAir(program) ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200 hover:border-gray-300'"
-                                >
-                                <div class="relative h-[90px] w-full bg-gray-200 overflow-hidden">
-                                    <img
-                                    :src="getImgSrc(program)"
-                                    :alt="program.title"
-                                    @error="handleImgError(program)"
-                                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                    :class="[isProgramOnAir(program) ? 'opacity-100' : 'opacity-95', isDragging ? 'pointer-events-none' : '']"
-                                    />
-                                    <div v-if="isProgramOnAir(program)" class="absolute top-1.5 left-1.5 flex items-center gap-1.5 px-2 py-0.5 bg-red-600 text-white text-xs font-bold rounded shadow-md animate-pulse">
-                                        <span class="w-1.5 h-1.5 bg-white rounded-full"></span>
-                                        ON AIR
-                                    </div>
-                                    <div v-if="program.isDVR" class="absolute bottom-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 bg-gray-900 rounded text-xs font-medium" style="color: #34d399;">
-                                        <PlayCircleOutlined /> 見逃し
-                                    </div>
-                                </div>
-                                <div :class="['flex-1 p-2 flex flex-col relative', isDragging ? 'pointer-events-none' : '']">
-                                    <div class="flex items-center justify-between mb-1.5">
-                                    <div
-                                        class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold text-white shadow-sm"
-                                        :style="{ backgroundColor: getBroadcasterColor(program) }"
-                                    >
-                                        <DesktopOutlined />
-                                        {{ program.broadcasterName.replace('系', '').replace('テレビ', '') }}
-                                    </div>
-                                    <span
-                                        class="text-xs px-1.5 py-0.5 rounded border"
-                                        :class="getTagColor(program.genreTag)"
-                                    >
-                                        {{ program.genreTag }}
-                                    </span>
-                                    </div>
-                                    <div class="flex items-baseline gap-1 mb-1 text-gray-800">
-                                    <span class="text-lg font-bold font-mono tracking-tight">{{ formatTime(program.startAt) }}</span>
-                                    <span class="text-sm text-gray-500 font-mono">~ {{ formatTime(program.endAt) }}</span>
-                                    </div>
-                                    <h3 class="text-base font-semibold text-gray-900 mb-1.5 leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors">
-                                    {{ program.seriesTitle }}
-                                    </h3>
-                                    <p v-if="program.title !== program.seriesTitle && program.title.trim() !== ''" class="text-sm text-gray-500 mb-2 line-clamp-2 leading-relaxed">
-                                    {{ program.title }}
-                                    </p>
-                                    <div class="mt-auto pt-1.5 border-t border-gray-200/50 flex justify-between items-center text-sm text-gray-400">
-                                    <div class="flex items-center gap-1">
-                                        <ClockCircleOutlined /> {{ getDurationMin(program) }} min
-                                    </div>
-                                    <div class="flex gap-2 opacity-60">
-                                        <MobileOutlined v-if="program.platforms.includes('ios')" title="Mobile" />
-                                        <MonitorOutlined v-if="program.platforms.includes('web')" title="Web" />
-                                    </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div v-for="program in day.programs" :key="program.id" class="flex-shrink-0" :style="{ width: cardWidth + 'px', willChange: 'transform' }">
+                            <div v-if="!program.visible" v-intersect="() => makeProgramVisible(program)" :style="{ height: day.maxHeight + 'px' }"></div>
+                            <ProgramCard
+                                v-else
+                                :program="program"
+                                :is-dragging="isDragging"
+                                @card-click="openProgramUrl(program)"
+                                :style="{ height: day.maxHeight + 'px' }"
+                            />
                         </div>
                     </div>
                 </section>
@@ -143,18 +105,18 @@
 
             <!-- Timeline Calendar View -->
             <div v-if="viewMode === 'timeline'" class="space-y-12">
-                <section v-for="(timeline, dateKey) in timelineDays" :key="dateKey">
+                 <section v-for="(day, dateKey) in groupedPrograms" :key="dateKey">
                     <!-- Date Header -->
                     <div class="flex items-center gap-3 mb-4">
                         <div class="flex flex-col items-center bg-gray-200 rounded-lg px-3 py-1 border border-gray-300 min-w-[3.5rem]">
-                            <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{{ getMonth(timeline.dayPrograms[0].startAt) }}月</span>
-                            <span class="text-xl font-bold text-gray-800 leading-none">{{ getDay(timeline.dayPrograms[0].startAt) }}</span>
+                            <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{{ getMonth(day.programs[0].startAt) }}月</span>
+                            <span class="text-xl font-bold text-gray-800 leading-none">{{ getDay(day.programs[0].startAt) }}</span>
                         </div>
                         <h2 class="text-lg md:text-xl font-bold text-gray-700">
-                            {{ getWeekday(timeline.dayPrograms[0].startAt) }}曜日
+                            {{ getWeekday(day.programs[0].startAt) }}曜日
                         </h2>
                         <span class="text-sm text-gray-500 font-mono ml-auto bg-gray-200 px-2 py-1 rounded-full border border-gray-300">
-                            {{ timeline.dayPrograms.length }}
+                            {{ day.programs.length }}
                         </span>
                     </div>
 
@@ -163,8 +125,8 @@
                         <!-- Time Header -->
                         <div class="flex sticky top-0 bg-gray-100 z-10 border-b border-gray-200">
                             <div class="w-32 flex-shrink-0 border-r border-gray-200"></div> <!-- Channel column header -->
-                            <div class="flex" :style="{ width: timeline.durationHours * PIXELS_PER_HOUR + 'px' }">
-                                <div v-for="time in timeline.timeSlots" :key="time" class="w-48 text-center border-r border-gray-200 p-2 font-mono text-sm text-gray-600">
+                            <div class="flex" :style="{ width: day.timeline.durationHours * PIXELS_PER_HOUR + 'px' }">
+                                <div v-for="time in day.timeline.timeSlots" :key="time" class="w-48 text-center border-r border-gray-200 p-2 font-mono text-sm text-gray-600">
                                     {{ formatTime(time) }}
                                 </div>
                             </div>
@@ -172,55 +134,25 @@
 
                         <!-- Channel Rows -->
                         <div class="">
-                            <div v-for="(programs, channelName) in timeline.channels" :key="channelName" class="flex border-b border-gray-200 last:border-b-0">
+                            <div v-for="(channelPrograms, channelName) in day.timeline.channels" :key="channelName" class="flex border-b border-gray-200 last:border-b-0">
                                 <!-- Channel Name -->
                                 <div class="w-32 flex-shrink-0 p-2 border-r border-gray-200 flex items-center justify-center font-bold text-sm bg-gray-50 text-gray-700">
                                     {{ channelName.replace('系', '').replace('テレビ', '') }}
                                 </div>
                                 <!-- Programs -->
-                                <div class="relative flex-grow h-24 bg-gray-50/50" :style="{ width: timeline.durationHours * PIXELS_PER_HOUR + 'px' }">
-                                    <div v-for="program in programs" :key="program.id"
+                                <div class="relative flex-grow h-24 bg-gray-50/50" :style="{ width: day.timeline.durationHours * PIXELS_PER_HOUR + 'px' }">
+                                    <div v-for="program in channelPrograms" :key="program.id"
                                         class="absolute top-0 h-full p-2 group"
-                                        :style="getProgramStyle(program, timeline.timelineStart)"
+                                        :style="getProgramStyle(program, day.timeline.timelineStart)"
                                     >
                                         <a-popover trigger="hover" :overlayClassName="'!p-0 !-m-2'" :mouseEnterDelay="0.3">
                                             <template #content>
                                                 <div class="bg-white rounded-xl overflow-hidden shadow-2xl border border-gray-200" :style="{ width: cardWidth + 'px' }">
-                                                    <div class="relative h-[90px] w-full bg-gray-200 overflow-hidden">
-                                                        <img :src="getImgSrc(program)" @error="handleImgError(program)" class="w-full h-full object-cover" />
-                                                        <div v-if="isProgramOnAir(program)" class="absolute top-1.5 left-1.5 flex items-center gap-1.5 px-2 py-0.5 bg-red-600 text-white text-xs font-bold rounded shadow-md animate-pulse">
-                                                            <span class="w-1.5 h-1.5 bg-white rounded-full"></span>
-                                                            ON AIR
-                                                        </div>
-                                                    </div>
-                                                    <div class="p-2 flex flex-col relative">
-                                                        <div class="flex items-center justify-between mb-1.5">
-                                                            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold text-white shadow-sm" :style="{ backgroundColor: getBroadcasterColor(program) }">
-                                                                <DesktopOutlined />
-                                                                {{ program.broadcasterName.replace('系', '').replace('テレビ', '') }}
-                                                            </div>
-                                                            <span class="text-xs px-1.5 py-0.5 rounded border" :class="getTagColor(program.genreTag)">
-                                                                {{ program.genreTag }}
-                                                            </span>
-                                                        </div>
-                                                        <div class="flex items-baseline gap-1 mb-1 text-gray-800">
-                                                            <span class="text-lg font-bold font-mono tracking-tight">{{ formatTime(program.startAt) }}</span>
-                                                            <span class="text-sm text-gray-500 font-mono">~ {{ formatTime(program.endAt) }}</span>
-                                                        </div>
-                                                        <h3 class="text-base font-semibold text-gray-900 mb-1.5 leading-snug line-clamp-2">
-                                                            {{ program.seriesTitle }}
-                                                        </h3>
-                                                        <p v-if="program.title !== program.seriesTitle && program.title.trim() !== ''" class="text-sm text-gray-500 mb-2 line-clamp-3 leading-relaxed">
-                                                            {{ program.title }}
-                                                        </p>
-                                                        <div class="mt-auto pt-1.5 border-t border-gray-200/50 flex justify-between items-center text-sm text-gray-400">
-                                                            <div class="flex items-center gap-1"><ClockCircleOutlined /> {{ getDurationMin(program) }} min</div>
-                                                            <div class="flex gap-2 opacity-60">
-                                                                <MobileOutlined v-if="program.platforms.includes('ios')" title="Mobile" />
-                                                                <MonitorOutlined v-if="program.platforms.includes('web')" title="Web" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                    <ProgramCard
+                                                        :program="program"
+                                                        :is-dragging="false"
+                                                        @card-click="openProgramUrl(program)"
+                                                    />
                                                 </div>
                                             </template>
                                             <div 
@@ -332,17 +264,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, reactive, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, reactive, watch, nextTick } from 'vue';
 import axios from 'axios';
 import { transformRawData, getHKDate, formatTime, getMonth, getDay, getWeekday } from '../utils/tver.js';
-import { ReloadOutlined, PlayCircleOutlined, ClockCircleOutlined, DesktopOutlined, MobileOutlined, MonitorOutlined, TableOutlined, CalendarOutlined } from '@ant-design/icons-vue';
+import { ReloadOutlined, TableOutlined, CalendarOutlined } from '@ant-design/icons-vue';
 import { message, Spin as ASpin, Alert as AAlert, Button as AButton, Slider as ASlider, Popover as APopover, Modal as AModal } from 'ant-design-vue';
+import ProgramCard from './ProgramCard.vue';
 
 const programs = ref([]);
+const programsToMeasure = ref([]);
+const cardRefs = ref([]);
+let readyCounter = 0;
+
 const loading = ref(true);
 const error = ref(null);
 const filter = ref('ALL');
-const viewMode = ref('list'); // 'list' or 'timeline'
+const viewMode = ref('list');
 
 // --- Modal State ---
 const isModalVisible = ref(false);
@@ -408,6 +345,8 @@ const handleModalClose = () => {
     isTalentsLoading.value = false;
 };
 
+const isProgramOnAir = (program) => { const now = new Date(); return now >= program.startAt && now <= program.endAt; };
+
 const openProgramUrl = (program) => {
     if (viewMode.value === 'list' && dragDistance.value > 10) {
         return;
@@ -463,6 +402,9 @@ watch(cardWidth, (newValue) => {
 const fetchData = async () => {
     loading.value = true;
     error.value = null;
+    programs.value = [];
+    programsToMeasure.value = [];
+    cardRefs.value = [];
     try {
         const headers = { 'x-tver-platform-type': 'web' };
         const stations = ['ntv', 'ex', 'tbs', 'tx', 'cx'];
@@ -487,21 +429,56 @@ const fetchData = async () => {
             .sort((a, b) => {
                 const timeDiff = a.startAt.getTime() - b.startAt.getTime();
                 if (timeDiff !== 0) return timeDiff;
-                // Keep original sort for list view
                 const order = ['フジテレビ', '日テレ', 'TBS', 'テレビ東京', 'テレビ朝日'];
                 const aIndex = order.findIndex(name => a.broadcasterName.includes(name));
                 const bIndex = order.findIndex(name => b.broadcasterName.includes(name));
                 return aIndex - bIndex;
-            });
+            })
+            .map(p => ({ ...p, visible: false, height: 0 }));
 
-        programs.value = filtered;
+        if (filtered.length > 0) {
+            programsToMeasure.value = filtered;
+        } else {
+            programs.value = [];
+            loading.value = false;
+        }
+
     } catch (err) {
         console.error(err);
         error.value = err.message || "不明なエラーが発生しました";
-        message.error('Failed to fetch TV schedule.');
-    } finally {
         loading.value = false;
     }
+};
+
+const onCardReady = () => {
+    readyCounter++;
+    if (readyCounter >= programsToMeasure.value.length) {
+        measureHeights();
+    }
+};
+
+const measureHeights = async () => {
+    await nextTick();
+    const newProgramsData = [...programsToMeasure.value];
+    let changed = false;
+    cardRefs.value.forEach((el, index) => {
+        if (el && newProgramsData[index] && !newProgramsData[index].height) {
+            newProgramsData[index].height = el.offsetHeight;
+            changed = true;
+        }
+    });
+    
+    if(changed) {
+        programs.value = newProgramsData;
+    }
+
+    programsToMeasure.value = [];
+    cardRefs.value = [];
+    loading.value = false;
+};
+
+const makeProgramVisible = (program) => {
+    program.visible = true;
 };
 
 onMounted(() => {
@@ -521,30 +498,40 @@ watch(viewMode, (newMode) => {
 });
 
 const filteredPrograms = computed(() => {
-    if (filter.value === 'ALL') return programs.value;
+    const source = programs.value.length ? programs.value : programsToMeasure.value;
+    if (filter.value === 'ALL') return source;
     const filterMap = { 'NTV': '日テレ', 'EX': 'テレビ朝日', 'TBS': 'TBS', 'TX': 'テレビ東京', 'CX': 'フジ' };
-    return programs.value.filter(p => p.broadcasterName.includes(filterMap[filter.value]));
+    return source.filter(p => p.broadcasterName.includes(filterMap[filter.value]));
 });
 
 const groupedPrograms = computed(() => {
     const groups = {};
+    if (!programs.value.length) return groups;
+
     filteredPrograms.value.forEach(program => {
         const hk = getHKDate(program.startAt);
         const dateKey = `${hk.getUTCFullYear()}-${hk.getUTCMonth()}-${hk.getUTCDate()}`;
-        if (!groups[dateKey]) { groups[dateKey] = []; }
-        groups[dateKey].push(program);
+        if (!groups[dateKey]) { 
+            groups[dateKey] = { programs: [], maxHeight: 0, timeline: {} };
+        }
+        groups[dateKey].programs.push(program);
     });
+
+    for (const dateKey in groups) {
+        const dayPrograms = groups[dateKey].programs;
+        if(dayPrograms.length > 0) {
+            const maxH = Math.max(...dayPrograms.map(p => p.height || 0));
+            groups[dateKey].maxHeight = maxH > 0 ? maxH : 290; // Fallback height
+        }
+    }
     return groups;
 });
 
-// --- Timeline View Computed ---
 const timelineDays = computed(() => {
-    if (viewMode.value !== 'timeline') return {};
-    const dayGroups = groupedPrograms.value;
-    const timelines = {};
-
-    for (const dateKey in dayGroups) {
-        const dayPrograms = dayGroups[dateKey];
+    const processedDays = groupedPrograms.value;
+    for (const dateKey in processedDays) {
+        const day = processedDays[dateKey];
+        const dayPrograms = day.programs;
         if (dayPrograms.length === 0) continue;
 
         let minTime = dayPrograms[0].startAt.getTime();
@@ -589,16 +576,14 @@ const timelineDays = computed(() => {
             timeSlots.push(time);
         }
 
-        timelines[dateKey] = {
-            dayPrograms,
+        day.timeline = {
             timelineStart,
-            timelineEnd,
             durationHours,
             timeSlots,
             channels: finalChannels,
         };
     }
-    return timelines;
+    return processedDays;
 });
 
 const getProgramStyle = (program, timelineStart) => {
@@ -609,21 +594,9 @@ const getProgramStyle = (program, timelineStart) => {
     return { left: `${left}px`, width: `${width}px` };
 };
 
-// --- Shared/List View Logic ---
-const IMAGE_BASE_URL_FALLBACK = "https://picsum.photos/800/450";
 const imageSources = reactive({});
-const getImgSrc = (program) => {
-  if (!program) return IMAGE_BASE_URL_FALLBACK;
-  return imageSources[program.id] || `https://image-cdn.tver.jp/w=600${program.thumbnailUrl}`;
-}
-const handleImgError = (program) => { 
-  if(program) {
-    imageSources[program.id] = IMAGE_BASE_URL_FALLBACK; 
-  }
-};
-
 const getModalImgSrc = (program) => {
-  if (!program || !program.thumbnailUrl) return IMAGE_BASE_URL_FALLBACK;
+  if (!program || !program.thumbnailUrl) return "https://picsum.photos/800/450";
   const cacheKey = program.id + '_modal';
   return imageSources[cacheKey] || `https://image-cdn.tver.jp${program.thumbnailUrl}`;
 };
@@ -636,22 +609,8 @@ const onModalImgError = () => {
 const handleModalImgError = (program) => {
   if (program) {
     const cacheKey = program.id + '_modal';
-    imageSources[cacheKey] = IMAGE_BASE_URL_FALLBACK;
+    imageSources[cacheKey] = "https://picsum.photos/800/450";
   }
-};
-const isProgramOnAir = (program) => { const now = new Date(); return now >= program.startAt && now <= program.endAt; };
-const getDurationMin = (program) => Math.round((program.endAt.getTime() - program.startAt.getTime()) / 60000);
-
-const getTagColor = (tag) => {
-    switch (tag) {
-      case 'スペシャル': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'ニュース': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'バラエティ': return 'bg-pink-100 text-pink-800 border-pink-200';
-      case 'ドラマ': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'スポーツ': return 'bg-green-100 text-green-800 border-green-200';
-      case 'アニメ': return 'bg-orange-100 text-orange-800 border-orange-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
 };
 
 const getBroadcasterColor = (program) => {
@@ -780,7 +739,7 @@ const stopTalentDragging = () => {
                 cancelTalentMomentum();
             }
         };
-        cancelMomentum();
+        cancelTalentMomentum();
         talentAnimationFrameId.value = requestAnimationFrame(applyMomentum);
     } else {
         isTalentDragging.value = false;
