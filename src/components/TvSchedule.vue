@@ -260,6 +260,22 @@
                 <a-alert message="詳細の読み込みに失敗しました。" type="error" />
             </div>
         </a-modal>
+
+        <!-- Back to Top Button -->
+        <a-button
+            v-show="showBackToTop"
+            class="back-to-top-btn"
+            type="primary"
+            shape="circle"
+            @click="scrollToTop"
+            title="回到頂部"
+        >
+            <template #icon>
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 19V5M12 5L6 11M12 5l6 6" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </template>
+        </a-button>
     </div>
 </template>
 
@@ -289,6 +305,7 @@ const selectedProgramDetails = ref(null);
 const selectedProgramForModal = ref(null);
 const selectedProgramTalents = ref([]);
 const isTalentsLoading = ref(false);
+const showBackToTop = ref(false);
 
 // --- List View Specific ---
 const cardWidth = ref(300);
@@ -491,6 +508,7 @@ onMounted(() => {
         viewMode.value = savedView;
     }
     fetchData();
+    window.addEventListener('scroll', handleScroll);
 });
 
 watch(viewMode, (newMode) => {
@@ -622,6 +640,14 @@ const getBroadcasterColor = (program) => {
     return '#475569';
 };
 
+const handleScroll = () => {
+    showBackToTop.value = window.scrollY > 300;
+};
+
+const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 // --- Drag-to-scroll Logic (For List View) ---
 const isDragging = ref(false);
 const isDown = ref(false);
@@ -694,6 +720,7 @@ const cancelMomentum = () => {
 onBeforeUnmount(() => {
     cancelMomentum();
     cancelTalentMomentum();
+    window.removeEventListener('scroll', handleScroll);
 });
 
 // --- Drag-to-scroll Logic (For Talents List) ---
@@ -779,5 +806,24 @@ const cancelTalentMomentum = () => {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+}
+.back-to-top-btn {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: opacity 0.2s;
+  opacity: 0.85;
+  width: 56px;
+  height: 56px;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.back-to-top-btn:hover {
+  opacity: 1;
 }
 </style>
