@@ -452,7 +452,7 @@ const filterButtons = [
     { label: 'フジ', value: 'CX', color: '#06b6d4' },
     { label: '日テレ', value: 'NTV', color: '#f59e0b' },
     { label: 'TBS', value: 'TBS', color: '#2563eb' },
-    { label: '東京', value: 'TX', color: '#dc2626' },
+    { label: '東京', value: 'TX', color: '#10b981' },
     { label: '朝日', value: 'EX', color: '#f43f5e' },
 ];
 
@@ -658,7 +658,7 @@ const getBroadcasterColor = (program) => {
     if (program.broadcasterName.includes('日テレ')) return '#f59e0b';
     if (program.broadcasterName.includes('テレビ朝日')) return '#f43f5e';
     if (program.broadcasterName.includes('TBS')) return '#2563eb';
-    if (program.broadcasterName.includes('テレビ東京')) return '#dc2626';
+    if (program.broadcasterName.includes('テレビ東京')) return '#10b981';
     if (program.broadcasterName.includes('フジ')) return '#06b6d4';
     return '#475569';
 };
