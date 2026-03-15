@@ -1,5 +1,82 @@
 <template>
   <a-card title="九巴到站時間" class="kmb-card">
+    <!-- Comparison Floating Bar -->
+    <div v-if="comparisonStops.length > 0" class="comparison-bar shadow-lg border animate__animated animate__fadeInUp">
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-lg font-black text-blue-800 flex items-center gap-2">
+          <swap-outlined /> 路線對比 ({{ comparisonStops.length }}/3)
+        </span>
+        <div class="flex items-center gap-2">
+          <div v-if="lastComparisonUpdated" class="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
+            最後更新: {{ lastComparisonUpdated }}
+          </div>
+          <a-button @click="fetchComparisonEtas" type="text" size="small" class="flex items-center justify-center p-0 h-6 w-6">
+            <template #icon>
+              <loading-outlined v-if="loadingComparison" :style="{ color: '#1677ff', fontSize: '16px' }" />
+              <reload-outlined v-else :style="{ color: '#1677ff', fontSize: '16px' }" />
+            </template>
+          </a-button>
+          <a-button type="text" size="small" @click="comparisonStops = []" danger class="font-bold">清空</a-button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div v-for="(item, index) in sortedComparisonResult" :key="item.route + '-' + item.stop" 
+             class="comp-item p-4 rounded-xl shadow-sm relative overflow-hidden animate__animated animate__flipInX"
+             :style="{ borderLeftColor: index === 0 ? '#eab308' : (index === 1 ? '#94a3b8' : '#d97706') }">
+          <!-- Rank Badge -->
+          <div class="absolute left-0 top-0 w-8 h-8 flex items-center justify-center text-sm font-black text-white rounded-br-xl shadow-md z-30"
+               :style="{ backgroundColor: index === 0 ? '#FFD700' : (index === 1 ? '#C0C0C0' : '#CD7F32'), border: '1px solid rgba(255,255,255,0.3)' }">
+            {{ index + 1 }}
+          </div>
+
+          <!-- Decorative Background Route -->
+          <div class="absolute -right-2 -bottom-4 text-6xl font-black opacity-5 text-gray-400 italic pointer-events-none select-none">
+            {{ item.route }}
+          </div>
+
+          <div class="flex justify-between items-start mb-2 pl-6">
+            <div class="flex flex-col">
+              <span class="text-3xl font-black text-gray-800 leading-none mb-1 tracking-tight">{{ item.route }}</span>
+              <div class="truncate text-xs font-bold text-gray-400 uppercase tracking-wider">{{ item.name_tc }}</div>
+            </div>
+            <a-button type="text" shape="circle" size="small" @click="removeFromComparison(comparisonStops.findIndex(s => s.stop === item.stop && s.route === item.route))" class="text-gray-300 hover:text-red-400 hover:bg-red-50">
+              <template #icon><delete-outlined /></template>
+            </a-button>
+          </div>
+          
+          <div v-if="item.etas && item.etas.length > 0" class="mt-4 space-y-2 pl-6">
+            <div v-for="(eta, eIdx) in item.etas.slice(0, 3)" :key="eIdx" 
+                 class="flex items-center justify-between p-1.5 rounded-lg transition-colors"
+                 :class="eIdx === 0 ? 'bg-blue-50/50' : 'hover:bg-gray-50'">
+              
+              <div class="flex items-center">
+                <div v-if="eIdx === 0" class="eta-status-dot" 
+                     :class="eta.minutes <= 3 ? 'status-urgent' : (eta.minutes <= 8 ? 'status-soon' : 'status-normal')"></div>
+                <span :class="eIdx === 0 ? 'text-2xl font-black text-blue-600' : 'text-sm font-bold text-gray-500'">
+                  {{ eta.minutes === 0 ? '即將' : eta.minutes }}<span class="text-xs ml-0.5" v-if="eta.minutes > 0">分</span>
+                </span>
+              </div>
+
+              <div class="flex flex-col items-end">
+                <span :class="eIdx === 0 ? 'text-xs font-black text-blue-400' : 'text-[10px] font-bold text-gray-300'">
+                  {{ eta.time }}
+                </span>
+                <div v-if="eIdx === 0 && eta.remark" class="text-[9px] text-blue-300 font-bold scale-90 origin-right">{{ eta.remark }}</div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="py-10 text-center">
+            <loading-outlined class="text-blue-200 text-xl" />
+          </div>
+        </div>
+        <div v-if="comparisonStops.length < 3" 
+             class="border-dashed border-2 border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-400 text-sm text-center p-6 bg-gray-50/30 hover:bg-gray-50 hover:border-blue-200 transition-all cursor-default group">
+          <plus-circle-outlined class="text-2xl mb-2 group-hover:text-blue-300 transition-colors" />
+          <div>點擊車站旁的「+」<br/><span class="text-xs opacity-60 italic">繼續增加對比路線</span></div>
+        </div>
+      </div>
+    </div>
+
     <div class="flex flex-col gap-4">
       <!-- Route Search View -->
       <div v-if="!selectedRoute">
@@ -84,12 +161,22 @@
             >
               <template #renderItem="{ item }">
                 <a-list-item 
-                  @click="selectStop(item, activeDirection)"
                   :class="{ 'selected-stop': isStopSelected(item) }"
-                  class="stop-list-item"
+                  class="stop-list-item group"
                 >
-                  <span class="stop-seq">{{ item.seq }}</span>
-                  <span class="stop-name">{{ item.name_tc }}</span>
+                  <div @click="selectStop(item, activeDirection)" class="flex items-center flex-grow cursor-pointer">
+                    <span class="stop-seq">{{ item.seq }}</span>
+                    <span class="stop-name">{{ item.name_tc }}</span>
+                  </div>
+                  <a-button 
+                    type="primary" 
+                    size="small" 
+                    shape="circle" 
+                    class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    @click="addToComparison(item)"
+                  >
+                    <template #icon><plus-circle-outlined /></template>
+                  </a-button>
                 </a-list-item>
               </template>
             </a-list>
@@ -162,7 +249,8 @@
 
 <script setup>
 import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
-import { FrownOutlined, ArrowLeftOutlined, ReloadOutlined, ClockCircleOutlined, InfoCircleOutlined, CarOutlined, LoadingOutlined } from '@ant-design/icons-vue';
+import { FrownOutlined, ArrowLeftOutlined, ReloadOutlined, ClockCircleOutlined, InfoCircleOutlined, CarOutlined, LoadingOutlined, SwapOutlined, DeleteOutlined, PlusCircleOutlined, EnvironmentOutlined, CloseOutlined } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
 const searchTerm = ref('');
 const allRoutes = ref([]);
@@ -177,6 +265,7 @@ const outboundStops = ref([]);
 const inboundStops = ref([]);
 
 const multiSelectedStops = ref([]);
+const comparisonStops = ref(JSON.parse(localStorage.getItem('kmb_comparison_stops') || '[]')); // Stores stops being compared: { route, stop, direction }
 const activeDirection = ref('outbound');
 const loadingEta = ref(false);
 const etaError = ref('');
@@ -403,6 +492,92 @@ const fetchEta = async (stops) => {
   }
 };
 
+const comparisonEtaResult = ref([]); // [{ route, stopName, etas: [] }]
+const lastComparisonUpdated = ref('');
+const loadingComparison = ref(false);
+
+const sortedComparisonResult = computed(() => {
+  const list = [...comparisonEtaResult.value].sort((a, b) => {
+    const aMin = (a.etas && a.etas.length > 0) ? a.etas[0].minutes : 999;
+    const bMin = (b.etas && b.etas.length > 0) ? b.etas[0].minutes : 999;
+    return aMin - bMin;
+  });
+  console.log('Sorted list:', list.map(i => i.route));
+  return list;
+});
+
+const addToComparison = (stop) => {
+  const exists = comparisonStops.value.find(s => s.stop === stop.stop && s.route === selectedRoute.value.route);
+  if (exists) {
+    message.warning('此車站已在比較清單中');
+    return;
+  }
+  if (comparisonStops.value.length >= 3) {
+    message.warning('最多只能比較三個車站');
+    return;
+  }
+  
+  comparisonStops.value.push({
+    route: selectedRoute.value.route,
+    stop: stop.stop,
+    name_tc: stop.name_tc,
+    direction: activeDirection.value
+  });
+  
+  fetchComparisonEtas();
+};
+
+const removeFromComparison = (index) => {
+  comparisonStops.value.splice(index, 1);
+  if (comparisonStops.value.length === 0) {
+    comparisonEtaResult.value = [];
+  } else {
+    fetchComparisonEtas();
+  }
+};
+
+const fetchComparisonEtas = async () => {
+  if (comparisonStops.value.length === 0) return;
+  
+  loadingComparison.value = true;
+  try {
+    const results = await Promise.all(comparisonStops.value.map(async (s) => {
+      const res = await fetchWithRetry(`https://data.etabus.gov.hk/v1/transport/kmb/eta/${s.stop}/${s.route}/1`);
+      const etas = (res?.data || [])
+        .filter(e => e && e.eta)
+        .slice(0, 3)
+        .map(e => ({
+          minutes: getEtaInMinutes(e.eta).minutes,
+          time: getEtaInMinutes(e.eta).time,
+          remark: e.rmk_tc
+        }));
+      return { ...s, etas };
+    }));
+    comparisonEtaResult.value = results;
+    lastComparisonUpdated.value = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch (err) {
+    console.error("Comparison ETA error:", err);
+  } finally {
+    loadingComparison.value = false;
+  }
+};
+
+// Update comparison ETAs every 10 seconds if active
+let comparisonInterval = null;
+watch(comparisonStops, (newStops) => {
+  localStorage.setItem('kmb_comparison_stops', JSON.stringify(newStops));
+  if (comparisonInterval) clearInterval(comparisonInterval);
+  if (newStops.length > 0) {
+    fetchComparisonEtas();
+    comparisonInterval = setInterval(fetchComparisonEtas, 10000);
+  }
+}, { deep: true, immediate: true });
+
+onUnmounted(() => {
+  if (etaInterval) clearInterval(etaInterval);
+  if (comparisonInterval) clearInterval(comparisonInterval);
+});
+
 const reset = () => {
   selectedRoute.value = null;
   multiSelectedStops.value = [];
@@ -411,6 +586,7 @@ const reset = () => {
   lastUpdated.value = '';
   activeDirection.value = 'outbound';
   if (etaInterval) clearInterval(etaInterval);
+  // comparisonStops stays so user can pick from another route
 };
 </script>
 
@@ -529,5 +705,56 @@ const reset = () => {
 .direction-toggle .ant-radio-button-wrapper {
   flex-grow: 1;
   text-align: center;
+}
+
+/* Comparison Bar Styles */
+.comparison-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(24, 144, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.comp-item {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-left: 4px solid #1890ff;
+}
+
+.comp-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+  border-color: #1890ff;
+}
+
+.eta-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.status-urgent { background-color: #f5222d; animation: pulse 1.5s infinite; }
+.status-soon { background-color: #faad14; }
+.status-normal { background-color: #52c41a; }
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.stop-list-item {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>
