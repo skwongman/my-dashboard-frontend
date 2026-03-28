@@ -18,7 +18,6 @@
 
       <a-select
         v-model:value="selectedStation"
-        show-search
         placeholder="選擇車站"
         style="width: 100%; margin-bottom: 24px"
         :options="stationOptions"
