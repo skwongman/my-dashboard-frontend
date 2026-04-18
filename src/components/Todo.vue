@@ -31,8 +31,8 @@
           </div>
         </div>
         <div class="calendar-days">
-          <div 
-            v-for="(day, index) in flatCalendar" 
+          <div
+            v-for="(day, index) in flatCalendar"
             :key="index"
             class="calendar-day"
             :class="{
@@ -40,7 +40,8 @@
               'selected-day': editingDate === day.fullDate,
               'today': isToday(day.fullDate),
               'holiday-day': isHoliday(day.fullDate),
-              'drag-over': dragOverDate === day.fullDate
+              'drag-over': dragOverDate === day.fullDate,
+              'next-month': day.isNextMonth
             }"
             @click="day.date && (!isMobile || mobileViewMode === 'list') && showInlineInput(day.fullDate, $event)"
             @dragover.prevent="onDragOver(day.fullDate)"
@@ -340,13 +341,13 @@ const flatCalendar = computed(() => {
   const firstDay = new Date(currentYear.value, currentMonth.value, 1);
   const lastDay = new Date(currentYear.value, currentMonth.value + 1, 0);
   const days = [];
-  
+
   // Add empty days before the first of the month
   const startDayOfWeek = firstDay.getDay();
   for (let i = 0; i < startDayOfWeek; i++) {
     days.push({});
   }
-  
+
   // Add days of the month
   for (let d = 1; d <= lastDay.getDate(); d++) {
     const dateObj = new Date(currentYear.value, currentMonth.value, d);
@@ -355,13 +356,28 @@ const flatCalendar = computed(() => {
       fullDate: `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`,
     });
   }
-  
-  // Add empty days after the last of the month to complete the grid
+
+  // Fill the rest of the calendar with next month's dates
+  // Calculate how many more cells we need to complete the last week
   const totalCells = Math.ceil(days.length / 7) * 7;
-  while (days.length < totalCells) {
-    days.push({});
+  const remainingCells = totalCells - days.length;
+
+  // Only add next month's dates if there are empty cells to fill
+  if (remainingCells > 0) {
+    const nextMonth = currentMonth.value === 11 ? 0 : currentMonth.value + 1;
+    const nextYear = currentMonth.value === 11 ? currentYear.value + 1 : currentYear.value;
+
+    // Add exactly the number of next month's dates needed to fill the grid
+    for (let d = 1; d <= remainingCells; d++) {
+      const dateObj = new Date(nextYear, nextMonth, d);
+      days.push({
+        date: d,
+        fullDate: `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`,
+        isNextMonth: true, // Mark as next month
+      });
+    }
   }
-  
+
   return days;
 });
 
@@ -957,6 +973,18 @@ function getDayAbbr(fullDate) {
   transition: box-shadow 0.3s, border 0.3s;
   box-shadow: 0 2px 8px 0 rgba(24, 144, 255, 0.03);
   position: relative;
+}
+
+/* Style for next month dates */
+.calendar-day.next-month {
+  background: #fafbfc;
+  border-color: #e8e8e8;
+  opacity: 0.7;
+}
+
+.calendar-day.next-month:hover {
+  box-shadow: 0 2px 6px 0 rgba(82, 196, 26, 0.08);
+  border-color: #d9d9d9;
 }
 
 .calendar-day:hover {
