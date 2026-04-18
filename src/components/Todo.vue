@@ -43,7 +43,7 @@
               'drag-over': dragOverDate === day.fullDate,
               'next-month': day.isNextMonth
             }"
-            @click="day.date && (!isMobile || mobileViewMode === 'list') && showInlineInput(day.fullDate, $event)"
+            @click="day.date && (!isMobile || mobileViewMode === 'list') ? showInlineInput(day.fullDate, $event) : (isMobile && mobileViewMode === 'grid' && todosByDate(day.fullDate).length > 0 && showMobileTodoModal(day.fullDate))"
             @dragover.prevent="onDragOver(day.fullDate)"
             @dragleave="onDragLeave(day.fullDate)"
             @drop="onDrop(day.fullDate)"
@@ -241,6 +241,87 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+      <!-- Mobile Todo Modal for Grid View -->
+      <a-modal
+        v-model:open="mobileTodoModalVisible"
+        title="Todos"
+        :footer="null"
+        :closable="true"
+        :maskClosable="true"
+        destroy-on-close
+        class="mobile-todo-modal"
+      >
+        <div v-if="todosByDate(mobileTodoModalDate).length > 0">
+          <a-list
+            size="small"
+            :data-source="todosByDate(mobileTodoModalDate)"
+            bordered
+            :split="false"
+          >
+            <template #renderItem="{ item: todo }">
+              <a-list-item
+                class="todo-list-item fancy-todo-item"
+                :class="{
+                  'repeat-daily': todo.repeated && todo.daily_repeat,
+                  'repeat-weekly': todo.repeated && todo.weekly_repeat,
+                  'repeat-monthly': todo.repeated && todo.monthly_repeat,
+                  'repeat-yearly': todo.repeated && todo.yearly_repeat
+                }"
+                @mouseenter="todo.hover = true"
+                @mouseleave="todo.hover = false"
+                draggable="true"
+                @dragstart="onDragStart(todo, mobileTodoModalDate)"
+              >
+                <div class="todo-left">
+                  <a-checkbox
+                    :checked="todo.completed"
+                    @change="e => toggleTodo(todo, e.target.checked)"
+                    @click.stop
+                  />
+                  <span
+                    :class="['todo-title-ellipsis', { 'completed-todo': todo.completed }]"
+                    @click.stop="handleTodoClick(todo)"
+                    @dblclick.stop="handleTodoClick(todo)"
+                    style="cursor:pointer; flex-grow:1;"
+                  >
+                    {{ todo.title }}
+                  </span>
+                </div>
+                <div class="todo-actions">
+                  <a-tooltip title="Delete">
+                    <a-popconfirm
+                      title="Are you sure to delete this todo?"
+                      @confirm="() => { deleteTodo(todo); popconfirmOpenId = null; }"
+                      @cancel="() => { popconfirmOpenId = null; }"
+                      ok-text="Delete"
+                      cancel-text="Cancel"
+                      placement="topRight"
+                      :open="popconfirmOpenId === todo.id"
+                      @openChange="(visible) => { popconfirmOpenId = visible ? todo.id : null; }"
+                    >
+                      <a-button
+                        v-show="todo.hover"
+                        type="text"
+                        danger
+                        size="small"
+                        shape="circle"
+                        @click.stop="popconfirmOpenId = todo.id"
+                        class="delete-btn"
+                      >
+                        <template #icon><DeleteOutlined /></template>
+                      </a-button>
+                    </a-popconfirm>
+                  </a-tooltip>
+                </div>
+              </a-list-item>
+            </template>
+          </a-list>
+        </div>
+        <div v-else class="no-todos-message">
+          No todos for this date.
+        </div>
+      </a-modal>
   </a-card>
 </template>
 
@@ -263,7 +344,8 @@ import {
   RocketOutlined,
   HeartFilled,
   AppstoreOutlined,
-  UnorderedListOutlined
+  UnorderedListOutlined,
+  EyeOutlined
 } from '@ant-design/icons-vue';
 import { 
   Card as ACard, 
@@ -628,9 +710,17 @@ function handlePopconfirmKeydown(e) {
 
 const isMobile = ref(window.innerWidth <= 500);
 const mobileViewMode = ref('grid'); // 'grid' or 'list'
+const mobileTodoModalVisible = ref(false);
+const mobileTodoModalDate = ref(null);
 
 function toggleMobileView() {
   mobileViewMode.value = mobileViewMode.value === 'grid' ? 'list' : 'grid';
+}
+
+function showMobileTodoModal(date) {
+  if (!date) return;
+  mobileTodoModalDate.value = date;
+  mobileTodoModalVisible.value = true;
 }
 
 // ... (rest of the script setup)
@@ -1184,6 +1274,28 @@ function getDayAbbr(fullDate) {
 .todo-list.ant-list-bordered {
   border: none !important;
   box-shadow: none !important;
+}
+
+/* Mobile Todo Modal Styles */
+.mobile-todo-modal .ant-modal-content {
+  border-radius: 16px;
+}
+
+.mobile-todo-modal .ant-modal-header {
+  border-bottom: none;
+  padding-bottom: 8px;
+}
+
+.mobile-todo-modal .ant-modal-title {
+  font-size: 18px;
+  text-align: center;
+}
+
+.no-todos-message {
+  text-align: center;
+  color: #8c8c8c;
+  font-style: italic;
+  padding: 20px;
 }
 
 /* --- Responsive styles --- */
