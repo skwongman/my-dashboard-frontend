@@ -22,18 +22,28 @@
 
     <!-- Chart Section -->
     <div class="chart-section">
-      <a-card title="Weight Trend" class="weight-card">
+      <a-card
+        :title="'Weight Trend'"
+        class="weight-card"
+        :body-style="{ padding: '24px' }"
+        :head-style="{
+          padding: '16px 24px',
+          borderBottom: '1px solid #e5e7eb'
+        }"
+      >
         <template #extra>
-          <a-space>
-            <a-button @click="showManageWeightsModal" class="secondary-btn">
-              <template #icon><EditOutlined /></template>
-              Manage Entries
-            </a-button>
-            <a-button type="primary" @click="showAddWeightModal" class="add-btn">
-              <template #icon><PlusOutlined /></template>
-              Add Weight
-            </a-button>
-          </a-space>
+          <div class="button-group">
+            <a-space size="small">
+              <a-button @click="showManageWeightsModal" class="secondary-btn">
+                <template #icon><EditOutlined /></template>
+                Manage Entries
+              </a-button>
+              <a-button type="primary" @click="showAddWeightModal" class="add-btn">
+                <template #icon><PlusOutlined /></template>
+                Add Weight
+              </a-button>
+            </a-space>
+          </div>
         </template>
 
         <div v-if="weights.length > 0" class="chart-container">
@@ -470,6 +480,16 @@ const chartOptions = {
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
+/* Button Group */
+.button-group {
+  display: flex;
+  align-items: center;
+}
+
+.button-group :deep(.ant-space) {
+  gap: 8px !important;
+}
+
 /* Form Styles */
 .weight-form {
   padding: 8px 0;
@@ -570,6 +590,19 @@ const chartOptions = {
   }
 }
 
+@media (max-width: 600px) {
+  .weight-card :deep(.ant-card-head) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .weight-card :deep(.ant-card-extra) {
+    align-self: stretch;
+    width: 100%;
+  }
+}
+
 @media (max-width: 480px) {
   .weight-container {
     padding: 12px;
@@ -581,6 +614,27 @@ const chartOptions = {
 
   .section-title {
     font-size: 20px;
+  }
+}
+
+@media (max-width: 420px) {
+  .weight-card :deep(.ant-card-head) {
+    gap: 8px;
+  }
+
+  .weight-card :deep(.ant-card-extra) {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .weight-card :deep(.ant-space) {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .weight-card :deep(.ant-btn) {
+    flex: 1;
+    min-width: 0;
   }
 }
 </style>
