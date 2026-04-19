@@ -787,9 +787,24 @@ async function addMobileTodo() {
 
 // ... (rest of the script setup)
 
+async function scrollToToday() {
+  if (!isMobile.value || mobileViewMode.value !== 'list') return;
+  
+  await nextTick();
+  const todayElement = document.querySelector('.calendar-day.today');
+  if (todayElement) {
+    todayElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+watch([currentMonth, currentYear, mobileViewMode], () => {
+  scrollToToday();
+});
+
 onMounted(() => {
   window.addEventListener('resize', () => { isMobile.value = window.innerWidth <= 500; });
   fetchTodos();
+  scrollToToday();
   window.addEventListener('keydown', handleKeydown);
   window.addEventListener('keydown', handlePopconfirmKeydown);
 });
