@@ -43,7 +43,7 @@
               'drag-over': dragOverDate === day.fullDate,
               'next-month': day.isNextMonth
             }"
-            @click="day.date && (!isMobile || mobileViewMode === 'list') ? showInlineInput(day.fullDate, $event) : (isMobile && mobileViewMode === 'grid' && todosByDate(day.fullDate).length > 0 && showMobileTodoModal(day.fullDate))"
+            @click="day.date && (!isMobile || mobileViewMode === 'list') ? showInlineInput(day.fullDate, $event) : (isMobile && mobileViewMode === 'grid' && showMobileTodoModal(day.fullDate))"
             @dragover.prevent="onDragOver(day.fullDate)"
             @dragleave="onDragLeave(day.fullDate)"
             @drop="onDrop(day.fullDate)"
@@ -245,13 +245,31 @@
       <!-- Mobile Todo Modal for Grid View -->
       <a-modal
         v-model:open="mobileTodoModalVisible"
-        title="Todos"
+        :title="`Todos - ${formatMobileModalDate(mobileTodoModalDate)}`"
         :footer="null"
         :closable="true"
         :maskClosable="true"
         destroy-on-close
         class="mobile-todo-modal"
       >
+        <!-- Add todo input at the top of the modal -->
+        <div class="add-todo-input" style="margin-bottom: 16px;">
+          <a-input
+            v-model:value="mobileAddTodoInput"
+            placeholder="Add new todo"
+            size="small"
+            @keydown.enter="addMobileTodo"
+            @keydown.esc="clearMobileTodoInput"
+            @blur="addMobileTodo"
+            allow-clear
+            autofocus
+          >
+            <template #prefix>
+              <PlusCircleOutlined style="color:#1890ff;" />
+            </template>
+          </a-input>
+        </div>
+
         <div v-if="todosByDate(mobileTodoModalDate).length > 0">
           <a-list
             size="small"
@@ -712,6 +730,7 @@ const isMobile = ref(window.innerWidth <= 500);
 const mobileViewMode = ref('grid'); // 'grid' or 'list'
 const mobileTodoModalVisible = ref(false);
 const mobileTodoModalDate = ref(null);
+const mobileAddTodoInput = ref('');
 
 function toggleMobileView() {
   mobileViewMode.value = mobileViewMode.value === 'grid' ? 'list' : 'grid';
@@ -720,7 +739,50 @@ function toggleMobileView() {
 function showMobileTodoModal(date) {
   if (!date) return;
   mobileTodoModalDate.value = date;
+  mobileAddTodoInput.value = ''; // Clear input when opening modal
   mobileTodoModalVisible.value = true;
+}
+
+// Mobile todo input functions
+function clearMobileTodoInput() {
+  if (!mobileAddTodoInput.value.trim()) {
+    mobileAddTodoInput.value = '';
+  }
+}
+
+async function addMobileTodo() {
+  const value = mobileAddTodoInput.value;
+  if (!value || !value.trim()) {
+    mobileAddTodoInput.value = '';
+    return;
+  }
+  try {
+    const res = await fetch(`${API_URL}/todo/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        title: value,
+        completed: false,
+        date: mobileTodoModalDate.value,
+        repeated: false,
+        daily_repeat: false,
+        weekly_repeat: false,
+        monthly_repeat: false,
+        yearly_repeat: false
+      }),
+    });
+    if (!res.ok) throw new Error('Failed to add todo');
+    const todo = await res.json();
+    todos.value.push(todo);
+    mobileAddTodoInput.value = '';
+    message.success('Todo added successfully');
+  } catch (e) {
+    message.error('Failed to add todo');
+    mobileAddTodoInput.value = '';
+  }
 }
 
 // ... (rest of the script setup)
@@ -1003,6 +1065,16 @@ function getDayAbbr(fullDate) {
   if (!fullDate) return '';
   const d = new Date(fullDate);
   return weekDays[d.getDay()];
+}
+
+function formatMobileModalDate(date) {
+  if (!date) return '';
+  // Format as "Mon 15 Apr 2024" for better readability on mobile
+  const d = new Date(date);
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${dayNames[d.getDay()]} ${d.getDate()} ${monthNames[d.getMonth()]}`;
 }
 </script>
 
