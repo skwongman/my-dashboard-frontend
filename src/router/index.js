@@ -1,8 +1,7 @@
 import { createRouter, createWebHashHistory  } from 'vue-router'
 import Login from '../views/Login.vue'
 import Dashboard from '../views/Dashboard.vue'
-import {useAuthStore} from '../stores/auth'
-import Register from '../views/Register.vue'  // Make sure this import exists
+import Register from '../views/Register.vue'
 
 const routes = [
   {
@@ -17,7 +16,7 @@ const routes = [
   {
     path: '/register',
     name: 'Register',
-    component: Login  // Updated from 'Register' to 'Login' in order to prevent for registration temporarily
+    component: Register
   },
   {
     path: '/dashboard',
@@ -30,16 +29,6 @@ const routes = [
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes
-})
-
-// Auth guard
-router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore()
-  if (to.path === '/login' && authStore.isAuthenticated) {
-    next('/dashboard')
-  } else {
-    next()
-  }
 })
 
 export default router

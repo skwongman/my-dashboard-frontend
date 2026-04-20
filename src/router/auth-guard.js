@@ -4,8 +4,15 @@ export async function setupAuthGuard(router) {
   router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
     
+    // If trying to access login page and already authenticated, redirect to dashboard
+    if (to.path === '/login' && authStore.isAuthenticated) {
+      next('/dashboard')
+      return
+    }
+    
+    // For all other routes requiring authentication
     if (to.meta.requiresAuth) {
-      if (authStore.token) {
+      if (authStore.isAuthenticated) {
         // If we have a token but no user data, fetch it
         if (!authStore.user) {
           try {
