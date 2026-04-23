@@ -12,9 +12,14 @@ export default defineConfig({
         short_name: 'Dashboard',
         description: 'Personal dashboard with todos, calendar, weather',
         theme_color: '#1890ff',
-        background_color: '#ffffff',
+        background_color: '#f0f2f5',
         display: 'standalone',
+        display_override: ['standalone'],
+        orientation: 'portrait',
         start_url: '/my-dashboard-frontend/',
+        scope: '/my-dashboard-frontend/',
+        lang: 'en',
+        categories: ['productivity', 'utilities'],
         icons: [
           {
             src: 'pwa-192x192.png',
