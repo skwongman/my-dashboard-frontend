@@ -1156,7 +1156,7 @@ function formatMobileModalDate(date) {
 .calendar-day.next-month {
   background: #fafbfc;
   border-color: #e8e8e8;
-  opacity: 0.7;
+  opacity: 0.5;
 }
 
 .calendar-day.next-month:hover {
