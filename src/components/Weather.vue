@@ -1,11 +1,11 @@
 <template>
-  <a-card title="Hong Kong Weather" class="mb-6 profile-card">
+  <a-card title="香港天氣" class="mb-6 profile-card">
     <template #extra>
       <a-button
         type="text"
         :loading="loading"
         @click="refreshWeather"
-        title="Refresh"
+        title="重新整理"
         class="!p-0 text-white"
       >
         <ReloadOutlined />
@@ -30,11 +30,11 @@
             </div>
             <div class="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
               <span>
-                <span class="font-medium text-gray-700">Humidity:</span>
+                <span class="font-medium text-gray-700">濕度：</span>
                 {{ mainWeather.humidity }}%
               </span>
               <span v-if="uvIndex.value.value !== ''">
-                <span class="font-medium text-gray-700">UV:</span>
+                <span class="font-medium text-gray-700">紫外線指數：</span>
                 {{ uvIndex.value }}
                 <span>({{ uvIndex.desc }})</span>
               </span>
@@ -42,7 +42,7 @@
           </div>
         </div>
         <div class="flex flex-col items-end">
-          <span class="text-xs text-gray-400">Last updated:</span>
+          <span class="text-xs text-gray-400">最後更新：</span>
           <span class="font-medium text-gray-600 text-sm">{{
             updateTime
           }}</span>
@@ -61,7 +61,7 @@
       </div>
 
       <a-tabs>
-        <a-tab-pane key="forecast" tab="9-Day Forecast">
+        <a-tab-pane key="forecast" tab="九天天氣預報">
           <a-table
             :dataSource="forecastData"
             :columns="forecastColumns"
@@ -72,7 +72,7 @@
             :loading="loading"
           />
         </a-tab-pane>
-        <a-tab-pane key="temperature" tab="Temperature">
+        <a-tab-pane key="temperature" tab="氣溫">
           <a-table
             :dataSource="temperatureData"
             :columns="temperatureColumns"
@@ -118,18 +118,18 @@ const iconUrl = computed(() =>
 )
 
 const temperatureColumns = [
-  { title: "Place", dataIndex: "place", key: "place" },
-  { title: "Temperature (°C)", dataIndex: "value", key: "value" }
+  { title: "地區", dataIndex: "place", key: "place" },
+  { title: "氣溫 (°C)", dataIndex: "value", key: "value" }
 ]
 
 const forecastColumns = [
   {
-    title: "Date",
+    title: "日期",
     dataIndex: "date",
     key: "date"
   },
   {
-    title: "Weather",
+    title: "天氣",
     dataIndex: "icon",
     key: "icon",
     customRender: ({ record }) =>
@@ -140,12 +140,12 @@ const forecastColumns = [
       })
   },
   {
-    title: "Min/Max Temp (°C)",
+    title: "最低／最高氣溫 (°C)",
     key: "temp",
     customRender: ({ record }) => `${record.minTemp} / ${record.maxTemp}`
   },
   {
-    title: "Description",
+    title: "天氣概況",
     dataIndex: "desc",
     key: "desc",
     responsive: ['md'] // Hide on mobile (xs/sm)
@@ -165,24 +165,24 @@ const iconDescMap = {
   // ...add more as needed
 }
 
+const findHkoStationData = (dataList = []) =>
+  dataList.find(
+    (d) => d.place === "香港天文台" || d.place === "Hong Kong Observatory"
+  )
+
 const fetchWeather = async () => {
   loading.value = true
   try {
-    const res = await fetch("https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en")
-    const resChi = await fetch("https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc")
+    const res = await fetch("https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc")
     const data = await res.json()
-    const dataChi = await resChi.json()
 
-    // Main weather (Hong Kong Observatory)
-    const hkoTemp = data.temperature.data.find(
-      (d) => d.place === "Hong Kong Observatory"
-    )
-    const hkoHumidity = data.humidity.data.find(
-      (d) => d.place === "Hong Kong Observatory"
-    )
+    // Main weather (Hong Kong Observatory / 香港天文台)
+    const hkoTemp = findHkoStationData(data.temperature?.data)
+    const hkoHumidity = findHkoStationData(data.humidity?.data)
+
     mainWeather.value.temperature = hkoTemp?.value ?? "--"
     mainWeather.value.humidity = hkoHumidity?.value ?? "--"
-    mainWeather.value.icon = data.icon[0] || "50"
+    mainWeather.value.icon = data.icon?.[0] || "50"
 
     // Format update time to "24 May 2025, 4:16 pm"
     if (data.updateTime) {
@@ -199,21 +199,24 @@ const fetchWeather = async () => {
     } else {
       updateTime.value = ""
     }
-    warnings.value = dataChi.warningMessage || []
+
+    warnings.value = data.warningMessage || []
 
     // UV Index
     if (data.uvindex?.data?.length) {
       uvIndex.value.value = data.uvindex.data[0].value
       uvIndex.value.desc = data.uvindex.data[0].desc
+    } else {
+      uvIndex.value = { value: "--", desc: "" }
     }
 
     // All temperature, humidity, rainfall data
-    temperatureData.value = data.temperature.data || []
-    humidityData.value = data.humidity.data || []
-    rainfallData.value = data.rainfall.data || []
+    temperatureData.value = data.temperature?.data || []
+    humidityData.value = data.humidity?.data || []
+    rainfallData.value = data.rainfall?.data || []
     rainfallTime.value = {
-      start: data.rainfall.startTime?.replace("T", " ").replace("+08:00", ""),
-      end: data.rainfall.endTime?.replace("T", " ").replace("+08:00", "")
+      start: data.rainfall?.startTime?.replace("T", " ").replace("+08:00", ""),
+      end: data.rainfall?.endTime?.replace("T", " ").replace("+08:00", "")
     }
   } catch (e) {
     message.error("Failed to fetch weather data")
@@ -232,14 +235,10 @@ const fetchForecast = async () => {
     forecastData.value = (data.weatherForecast || []).map((day) => ({
       date: day.forecastDate
         ? (() => {
-            const yyyy = day.forecastDate.slice(0, 4)
             const mm = day.forecastDate.slice(4, 6)
             const dd = day.forecastDate.slice(6, 8)
-            const dateObj = new Date(`${yyyy}-${mm}-${dd}`)
-            const weekday = dateObj.toLocaleDateString("en-US", {
-              weekday: "short"
-            })
-            return `${dd}/${mm} (${weekday})`
+            const weekday = day.week || ""
+            return `${dd}/${mm}${weekday ? ` (${weekday})` : ""}`
           })()
         : "",
       icon: day.ForecastIcon || "50",
