@@ -252,16 +252,21 @@
         destroy-on-close
         class="mobile-todo-modal"
       >
-        <!-- Add todo input at the top of the modal -->
-        <div class="add-todo-input" style="margin-bottom: 16px;">
+        <div
+          class="add-todo-input"
+          style="margin-bottom: 16px;"
+          v-if="mobileModalInputVisible"
+        >
           <a-input
             v-model:value="mobileAddTodoInput"
-            placeholder="Add new todo"
+            placeholder="Add todo"
             size="small"
             @keydown.enter="addMobileTodo"
-            @keydown.esc="clearMobileTodoInput"
+            @keydown.esc="hideMobileModalInputIfBlank"
             @blur="addMobileTodo"
+            @click.stop
             allow-clear
+            ref="mobileModalInputRef"
             autofocus
           >
             <template #prefix>
@@ -270,7 +275,7 @@
           </a-input>
         </div>
 
-        <div v-if="todosByDate(mobileTodoModalDate).length > 0">
+        <div v-if="todosByDate(mobileTodoModalDate).length > 0" @click="showMobileModalInput">
           <a-list
             size="small"
             :data-source="todosByDate(mobileTodoModalDate)"
@@ -336,7 +341,7 @@
             </template>
           </a-list>
         </div>
-        <div v-else class="no-todos-message">
+        <div v-else class="no-todos-message" @click="showMobileModalInput">
           No todos for this date.
         </div>
       </a-modal>
@@ -731,6 +736,8 @@ const mobileViewMode = ref('grid'); // 'grid' or 'list'
 const mobileTodoModalVisible = ref(false);
 const mobileTodoModalDate = ref(null);
 const mobileAddTodoInput = ref('');
+const mobileModalInputVisible = ref(false);
+const mobileModalInputRef = ref(null);
 
 function toggleMobileView() {
   mobileViewMode.value = mobileViewMode.value === 'grid' ? 'list' : 'grid';
@@ -739,14 +746,38 @@ function toggleMobileView() {
 function showMobileTodoModal(date) {
   if (!date) return;
   mobileTodoModalDate.value = date;
-  mobileAddTodoInput.value = ''; // Clear input when opening modal
+  mobileAddTodoInput.value = '';
+  mobileModalInputVisible.value = false;
   mobileTodoModalVisible.value = true;
 }
 
+function showMobileModalInput() {
+  if (mobileModalInputVisible.value) return;
+  mobileModalInputVisible.value = true;
+  nextTick(() => {
+    let inputRef = mobileModalInputRef.value;
+    if (Array.isArray(inputRef)) inputRef = inputRef[0];
+    if (inputRef && inputRef.input) {
+      inputRef.input.focus();
+      inputRef.input.select && inputRef.input.select();
+    } else if (inputRef && inputRef.focus) {
+      inputRef.focus();
+      inputRef.select && inputRef.select();
+    } else if (inputRef && inputRef.$el) {
+      const el = inputRef.$el.querySelector('input');
+      if (el) {
+        el.focus();
+        el.select && el.select();
+      }
+    }
+  });
+}
+
 // Mobile todo input functions
-function clearMobileTodoInput() {
+function hideMobileModalInputIfBlank() {
   if (!mobileAddTodoInput.value.trim()) {
     mobileAddTodoInput.value = '';
+    mobileModalInputVisible.value = false;
   }
 }
 
@@ -754,6 +785,7 @@ async function addMobileTodo() {
   const value = mobileAddTodoInput.value;
   if (!value || !value.trim()) {
     mobileAddTodoInput.value = '';
+    mobileModalInputVisible.value = false;
     return;
   }
   try {
@@ -778,10 +810,12 @@ async function addMobileTodo() {
     const todo = await res.json();
     todos.value.push(todo);
     mobileAddTodoInput.value = '';
+    mobileModalInputVisible.value = false;
     message.success('Todo added successfully');
   } catch (e) {
     message.error('Failed to add todo');
     mobileAddTodoInput.value = '';
+    mobileModalInputVisible.value = false;
   }
 }
 
