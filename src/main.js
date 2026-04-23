@@ -18,4 +18,17 @@ app.directive('intersect', intersect);
 // Initialize auth guard
 setupAuthGuard(router)
 
+// PWA install prompt handling
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  window.dispatchEvent(new CustomEvent('pwa-install-available', { detail: e }));
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  window.dispatchEvent(new CustomEvent('pwa-installed'));
+});
+
 app.mount('#app')
