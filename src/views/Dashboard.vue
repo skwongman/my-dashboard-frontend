@@ -51,7 +51,7 @@
 
     <a-layout>
       <!-- Header -->
-      <a-layout-header class="app-header shadow-sm">
+      <a-layout-header class="app-header shadow-none">
         <div class="header-content text-white">
           <menu-unfold-outlined
             v-if="collapsed"
