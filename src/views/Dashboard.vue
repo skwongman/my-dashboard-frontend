@@ -406,7 +406,7 @@ onUnmounted(() => {
 <style>
 /* Keep PWA/browser chrome color aligned with the in-app top navigation */
 .app-header {
-  background: #ffffff;
+  background: #001529;
 }
 
 .header-content {
@@ -415,7 +415,6 @@ onUnmounted(() => {
   align-items: center;
   height: 64px;
   padding: 0 20px;
-  color: #ffffff;
 }
 
 .trigger {
