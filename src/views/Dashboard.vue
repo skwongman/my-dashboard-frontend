@@ -51,7 +51,7 @@
 
     <a-layout>
       <!-- Header -->
-      <a-layout-header class="bg-white shadow-sm">
+      <a-layout-header class="app-header shadow-sm">
         <div class="header-content text-white">
           <menu-unfold-outlined
             v-if="collapsed"
@@ -404,12 +404,18 @@ onUnmounted(() => {
 </script>
 
 <style>
+/* Keep PWA/browser chrome color aligned with the in-app top navigation */
+.app-header {
+  background: #ffffff;
+}
+
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
   height: 64px;
   padding: 0 20px;
+  color: #ffffff;
 }
 
 .trigger {

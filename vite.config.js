@@ -11,7 +11,7 @@ export default defineConfig({
         name: 'My Dashboard',
         short_name: 'Dashboard',
         description: 'Personal dashboard with todos, calendar, weather',
-        theme_color: '#1890ff',
+        theme_color: '#ffffff',
         background_color: '#f0f2f5',
         display: 'standalone',
         display_override: ['standalone'],
