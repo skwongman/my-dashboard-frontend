@@ -10,12 +10,24 @@
     <div class="stats-grid">
       <div class="stat-card current-weight">
         <div class="stat-label">{{ STAT_LABELS.CURRENT_WEIGHT }}</div>
-        <div class="stat-value">{{ currentWeight }} kg</div>
+        <div class="stat-value">
+          <template v-if="statsLoading">
+            <a-spin size="small" />
+          </template>
+          <template v-else>
+            {{ currentWeight }} kg
+          </template>
+        </div>
       </div>
       <div class="stat-card weight-change">
         <div class="stat-label">{{ STAT_LABELS.WEIGHT_CHANGE_30_DAYS }}</div>
         <div :class="['stat-value', weightChange >= 0 ? 'positive' : 'negative']">
-          {{ weightChange >= 0 ? '+' : '' }}{{ weightChange.toFixed(1) }} kg
+          <template v-if="statsLoading">
+            <a-spin size="small" />
+          </template>
+          <template v-else>
+            {{ weightChange >= 0 ? '+' : '' }}{{ weightChange.toFixed(1) }} kg
+          </template>
         </div>
       </div>
     </div>
@@ -46,8 +58,18 @@
           </div>
         </template>
 
-        <div v-if="weights.length > 0" class="chart-container">
-          <Line :data="chartData" :options="chartOptions" />
+        <div
+          v-if="weights.length > 0"
+          :class="{ 'chart-container': true, 'loading': loading }"
+        >
+          <Line
+            v-if="!loading"
+            :data="chartData"
+            :options="chartOptions"
+          />
+          <template v-else>
+            <a-spin size="large" />
+          </template>
         </div>
         <div v-else class="empty-state">
           <InboxOutlined style="font-size: 48px; color: #d9d9d9" />
@@ -133,7 +155,7 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
-import { message } from 'ant-design-vue';
+import { message, Skeleton, Spin } from 'ant-design-vue';
 import { Line } from 'vue-chartjs';
 import {
   Chart as ChartJS,
@@ -159,6 +181,7 @@ const API_URL = import.meta.env.DEV ? import.meta.env.VITE_API_URL_LOCAL : impor
 
 const weights = ref([]);
 const loading = ref(false);
+const statsLoading = ref(true);
 const modalVisible = ref(false);
 const manageModalVisible = ref(false);
 const isMobile = ref(false);
@@ -210,6 +233,7 @@ const showManageWeightsModal = () => {
 
 const fetchWeights = async () => {
   loading.value = true;
+  statsLoading.value = true;
   try {
     const res = await fetch(`${API_URL}/weight`, {
       headers: {
@@ -223,7 +247,10 @@ const fetchWeights = async () => {
   } catch (err) {
     message.error(err.message || 'Failed to fetch weights');
   } finally {
-    loading.value = false;
+    setTimeout(() => {
+      loading.value = false;
+      statsLoading.value = false;
+    }, 300);
   }
 };
 
@@ -445,6 +472,24 @@ const chartOptions = {
 .chart-container {
   height: 400px;
   position: relative;
+}
+
+.chart-container.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.chart-container.loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 1;
 }
 
 .empty-state {
