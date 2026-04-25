@@ -219,6 +219,14 @@
             autofocus
           />
         </a-form-item>
+        <a-form-item label="Date">
+          <a-date-picker
+            v-model:value="modalEditDate"
+            format="YYYY-MM-DD"
+            style="width: 100%;"
+            :disabled-date="disabledDate"
+          />
+        </a-form-item>
         <a-form-item label="Time">
           <a-time-picker
             v-model:value="modalEditTime"
@@ -370,10 +378,10 @@ import {
   UnorderedListOutlined,
   EyeOutlined
 } from '@ant-design/icons-vue';
-import { 
-  Card as ACard, 
-  Button as AButton, 
-  Space as ASpace, 
+import {
+  Card as ACard,
+  Button as AButton,
+  Space as ASpace,
   Typography as ATypography,
   Input as AInput,
   Checkbox as ACheckbox,
@@ -388,6 +396,7 @@ import {
   Tooltip as ATooltip,
   Modal as AModal,
   TimePicker as ATimePicker,
+  DatePicker,
   Form as AForm,
   FormItem as AFormItem,
   Switch as ASwitch,
@@ -1011,6 +1020,7 @@ const modalLoading = ref(false);
 // For modal: split title and use db time
 const modalEditTitle = ref('');
 const modalEditTime = ref(null);
+const modalEditDate = ref(null);
 const modalEditRepeated = ref(false);
 const modalEditRepeatLevel = ref('daily');
 
@@ -1025,6 +1035,7 @@ function openModalEdit(todo) {
   modalEditTodo.value = todo;
   modalEditTitle.value = stripAtTime(todo.title);
   modalEditTime.value = todo.time ? dayjs(todo.time, 'HH:mm:ss') : null;
+  modalEditDate.value = todo.date ? dayjs(todo.date) : null;
   modalEditRepeated.value = !!todo.repeated;
   if (todo.daily_repeat) modalEditRepeatLevel.value = 'daily';
   else if (todo.weekly_repeat) modalEditRepeatLevel.value = 'weekly';
@@ -1034,17 +1045,28 @@ function openModalEdit(todo) {
   modalVisible.value = true;
 }
 
+// Allow any date selection
+function disabledDate(current) {
+  // No restrictions - allow any date
+  return false;
+}
+
 // On save, combine title and time, and update both fields in db, plus repeat fields
 async function handleModalOk() {
   if (!modalEditTodo.value) return;
   const newTitle = modalEditTitle.value.trim();
   const timeObj = modalEditTime.value;
+  const dateObj = modalEditDate.value;
   let combinedTitle = newTitle;
   let timeStr = '';
+  let dateStr = '';
   if (timeObj) {
     timeStr = timeObj.format('HH:mm:ss');
     // For display, append " at 9am"/" at 9:30pm"
     combinedTitle += ' at ' + timeObj.format(timeObj.minute() === 0 ? 'ha' : 'h:mma').toLowerCase();
+  }
+  if (dateObj) {
+    dateStr = dateObj.format('YYYY-MM-DD');
   }
   // Prepare repeat fields
   let repeated = !!modalEditRepeated.value;
@@ -1060,6 +1082,7 @@ async function handleModalOk() {
   const changed = (
     combinedTitle !== orig.title ||
     timeStr !== (orig.time || '') ||
+    dateStr !== (orig.date || '') ||
     repeated !== orig.repeated ||
     daily_repeat !== orig.daily_repeat ||
     weekly_repeat !== orig.weekly_repeat ||
@@ -1078,9 +1101,10 @@ async function handleModalOk() {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ 
-        title: combinedTitle, 
+      body: JSON.stringify({
+        title: combinedTitle,
         time: timeStr,
+        date: dateStr,
         repeated,
         daily_repeat,
         weekly_repeat,
@@ -1092,6 +1116,7 @@ async function handleModalOk() {
     // Update local state
     orig.title = combinedTitle;
     orig.time = timeStr;
+    orig.date = dateStr;
     orig.repeated = repeated;
     orig.daily_repeat = daily_repeat;
     orig.weekly_repeat = weekly_repeat;
