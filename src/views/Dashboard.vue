@@ -36,6 +36,7 @@
             <LineChartOutlined v-if="item.key === 'weight'" />
             <ThunderboltOutlined v-if="item.key === 'kmb'" />
             <PlaySquareOutlined v-if="item.key === 'tv-schedule'" />
+            <CloudUploadOutlined v-if="item.key === 'whiteboard'" />
           </template>
           <span>{{ item.label }}</span>
         </a-menu-item>
@@ -180,6 +181,7 @@
         <Weight v-else-if="currentMenu === 'weight'" />
         <Kmb v-else-if="currentMenu === 'kmb'" />
         <TvSchedule v-else-if="currentMenu === 'tv-schedule'" />
+        <ImageWhiteboard v-else-if="currentMenu === 'whiteboard'" />
       </a-layout-content>
     </a-layout>
   </a-layout>
@@ -210,6 +212,7 @@ import {
   LineChartOutlined,
   ThunderboltOutlined,
   PlaySquareOutlined,
+  CloudUploadOutlined,
 } from "@ant-design/icons-vue";
 import Weather from "../components/Weather.vue";
 import JPNews from "../components/JPNews.vue";
@@ -222,6 +225,7 @@ import Transportation from "../components/Transportation.vue";
 import Weight from "../components/Weight.vue";
 import Kmb from "../components/Kmb.vue";
 import TvSchedule from "../components/TvSchedule.vue";
+import ImageWhiteboard from "../components/ImageWhiteboard.vue"; // New whiteboard component
 
 const defaultMenuItems = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -236,6 +240,7 @@ const defaultMenuItems = [
   { key: 'weight', label: 'Weight' },
   { key: 'kmb', label: 'KMB' },
   { key: 'tv-schedule', label: 'TV Schedule' },
+  { key: 'whiteboard', label: 'Whiteboard' }, // New whiteboard feature
 ];
 
 const menuItems = ref([]);
