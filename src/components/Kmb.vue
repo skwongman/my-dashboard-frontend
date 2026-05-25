@@ -77,17 +77,20 @@
       </div>
     </div>
 
+    <!-- Sticky Search Bar - always visible below comparison bar -->
+    <div v-if="!selectedRoute" class="search-bar">
+      <a-input-search
+        v-model:value="searchTerm"
+        placeholder="搜尋路線 (例: 273, 960)"
+        enter-button
+        size="large"
+        @search="onSearch"
+      />
+    </div>
+
     <div class="flex flex-col gap-4">
       <!-- Route Search View -->
       <div v-if="!selectedRoute">
-        <a-input-search
-          v-model:value="searchTerm"
-          placeholder="搜尋路線 (例: 273, 960)"
-          enter-button
-          size="large"
-          class="mb-4"
-          @search="onSearch"
-        />
 
         <div v-if="loading" class="skeleton-wrapper">
           <a-skeleton active :paragraph="{ rows: 4 }" />
@@ -593,6 +596,7 @@ const reset = () => {
 <style scoped>
 .kmb-card {
   background: #f7fafc;
+  overflow: visible;
 }
 .route-list-item {
   cursor: pointer;
@@ -707,18 +711,26 @@ const reset = () => {
   text-align: center;
 }
 
-/* Comparison Bar Styles */
+/* Comparison Bar - normal flow, no sticky */
 .comparison-bar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(24, 144, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+/* Search Bar - always sticky at top, always visible */
+.search-bar {
   position: sticky;
   top: 0;
   z-index: 100;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
-  padding: 16px;
-  border-radius: 16px;
-  margin-bottom: 20px;
-  border: 1px solid rgba(24, 144, 255, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  padding: 12px 0;
+  margin-bottom: 4px;
 }
 
 .comp-item {
